@@ -8,6 +8,51 @@ This is a real-time door sign management system that allows department members t
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes (October 17, 2025)
+
+### Authentication System Migration
+- **Replaced Replit Auth with username/password authentication**
+  - Removed self-registration capability - only admins can create users
+  - Implemented passport-local strategy with bcrypt password hashing
+  - First user created automatically becomes admin
+  - Session-based authentication with secure session management
+
+### User Management & Authorization
+- **Admin User Management Interface** (`/admin/users`)
+  - Admins can create, edit, and delete user accounts
+  - Users assigned specific e-paper IDs (e.g., "user1", "user2") for external system integration
+  - Role-based access control: regular users vs. administrators
+  - Users can be linked to member profiles for status updates
+- **Authorization Rules**:
+  - Regular users can only update their own member's status (if assigned)
+  - Admins can update all statuses and manage all users
+  - Self-deletion prevention for admin accounts
+
+### Activity Logging & History
+- **Status History Tracking**
+  - All status changes logged to status_history table with timestamps
+  - History displayed in member detail view with timeline
+  - Tracks who made changes and when
+
+### Automatic E-Paper Sync
+- **Background Sync Service**
+  - Runs every 5 minutes to fetch statuses from e-paper export endpoint
+  - Updates local database with external changes
+  - Properly handles and records sync failures
+- **Sync Status UI**
+  - Dashboard header displays last sync time
+  - Shows sync errors if credentials missing or fetch fails
+  - Manual sync trigger for admins via refresh button
+  - Success/failure indicators with detailed error messages
+
+### Database Migration
+- **Migrated from in-memory to PostgreSQL**
+  - All data now persisted in production database
+  - Added sync_status and status_history tables
+  - Schema managed via Drizzle ORM
+
+**Test Credentials**: First admin user - username: "admin", password: "admin123"
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -38,6 +83,16 @@ Preferred communication style: Simple, everyday language.
 **Key Design Decision**: The application uses an in-memory storage adapter during development with sample data, but the schema and ORM setup support PostgreSQL for production deployment. This allows rapid development while maintaining production-ready architecture.
 
 ### Database Schema (PostgreSQL via Drizzle ORM)
+- **Users Table** (Authentication):
+  - `id`: UUID primary key (auto-generated)
+  - `username`: Unique login username
+  - `passwordHash`: Bcrypt-hashed password
+  - `email`, `firstName`, `lastName`: Optional profile information
+  - `role`: User role ("admin" or "regular")
+  - `memberId`: Foreign key to members table (optional)
+  - `epaperId`: E-paper system identifier (e.g., "user1", "user2")
+  - `createdAt`, `updatedAt`: Timestamps
+
 - **Members Table**:
   - `id`: UUID primary key (auto-generated)
   - `name`: Member's full name
@@ -47,7 +102,22 @@ Preferred communication style: Simple, everyday language.
   - `customStatusText`: Optional custom message (max 50 chars)
   - `lastUpdated`: Timestamp of last status change
 
-**Key Design Decision**: Email is used as the identifier for e-paper device mapping. The external API expects sanitized email addresses (replacing @ and . with _) as parameter keys.
+- **Status History Table**:
+  - `id`: UUID primary key (auto-generated)
+  - `memberId`: Foreign key to members table
+  - `status`: Status value at time of change
+  - `customStatusText`: Custom message (if any)
+  - `changedAt`: Timestamp of status change
+  - `changedBy`: User who made the change (optional)
+
+- **Sync Status Table**:
+  - `id`: UUID primary key (auto-generated)
+  - `syncedAt`: Timestamp of sync operation
+  - `success`: "true" or "false" indicating sync result
+  - `errorMessage`: Error details (if sync failed)
+  - `updatedCount`: Number of members updated
+
+**Key Design Decision**: Username/password authentication with role-based access control. First user created automatically becomes admin. E-paper ID field allows matching users to external system identifiers.
 
 ### External Dependencies
 
