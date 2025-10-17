@@ -86,7 +86,24 @@ export const insertStatusHistorySchema = createInsertSchema(statusHistory).omit(
 export type InsertStatusHistory = z.infer<typeof insertStatusHistorySchema>;
 export type StatusHistory = typeof statusHistory.$inferSelect;
 
-// E-paper sync status
+// Sync status table to track periodic e-paper sync operations
+export const syncStatus = pgTable("sync_status", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  syncedAt: timestamp("synced_at").notNull().defaultNow(),
+  success: varchar("success").notNull().default("true"), // "true" or "false"
+  errorMessage: text("error_message"),
+  updatedCount: varchar("updated_count").notNull().default("0"), // stored as string for simplicity
+});
+
+export const insertSyncStatusSchema = createInsertSchema(syncStatus).omit({
+  id: true,
+  syncedAt: true,
+});
+
+export type InsertSyncStatus = z.infer<typeof insertSyncStatusSchema>;
+export type SyncStatus = typeof syncStatus.$inferSelect;
+
+// E-paper sync status (for UI display)
 export interface EpaperSyncStatus {
   lastSync: Date;
   syncing: boolean;

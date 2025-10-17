@@ -1,4 +1,4 @@
-import { type Member, type InsertMember, type StatusHistory, type InsertStatusHistory, type User, type UpsertUser, members, statusHistory, users } from "@shared/schema";
+import { type Member, type InsertMember, type StatusHistory, type InsertStatusHistory, type User, type UpsertUser, type SyncStatus, type InsertSyncStatus, members, statusHistory, users, syncStatus } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -18,6 +18,10 @@ export interface IStorage {
   // Status history operations
   getStatusHistory(memberId: string): Promise<StatusHistory[]>;
   createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory>;
+  
+  // Sync status operations
+  getLatestSyncStatus(): Promise<SyncStatus | undefined>;
+  createSyncStatus(status: InsertSyncStatus): Promise<SyncStatus>;
 }
 
 // Database storage implementation
@@ -99,6 +103,20 @@ export class DbStorage implements IStorage {
 
   async createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory> {
     const result = await this.db.insert(statusHistory).values(history).returning();
+    return result[0];
+  }
+
+  async getLatestSyncStatus(): Promise<SyncStatus | undefined> {
+    const result = await this.db
+      .select()
+      .from(syncStatus)
+      .orderBy(desc(syncStatus.syncedAt))
+      .limit(1);
+    return result[0];
+  }
+
+  async createSyncStatus(status: InsertSyncStatus): Promise<SyncStatus> {
+    const result = await this.db.insert(syncStatus).values(status).returning();
     return result[0];
   }
 }
@@ -261,6 +279,22 @@ export class MemStorage implements IStorage {
     this.history.set(history.memberId, memberHistory);
     
     return record;
+  }
+
+  async getLatestSyncStatus(): Promise<SyncStatus | undefined> {
+    // MemStorage doesn't persist sync status
+    return undefined;
+  }
+
+  async createSyncStatus(status: InsertSyncStatus): Promise<SyncStatus> {
+    // MemStorage doesn't persist sync status - return a mock object
+    return {
+      id: randomUUID(),
+      syncedAt: new Date(),
+      success: status.success,
+      errorMessage: status.errorMessage ?? null,
+      updatedCount: status.updatedCount,
+    };
   }
 }
 

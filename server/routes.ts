@@ -205,15 +205,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/sync", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const statuses = await epaperService.fetchCurrentStatuses();
+      
+      // Update member statuses from e-paper data
+      let updatedCount = 0;
+      const members = await storage.getMembers();
+      
+      for (const member of members) {
+        if (!member.email) continue;
+        
+        const sanitizedEmail = member.email.replace(/[@.]/g, "_");
+        const statusKey = `${sanitizedEmail}_status`;
+        
+        if (statuses[statusKey] && statuses[statusKey] !== member.currentStatus) {
+          await storage.updateMemberStatus(member.id, statuses[statusKey]);
+          updatedCount++;
+        }
+      }
+      
+      // Record sync status
+      await storage.createSyncStatus({
+        success: "true",
+        errorMessage: null,
+        updatedCount: updatedCount.toString(),
+      });
+      
       res.json({ 
         success: true, 
-        statuses,
+        updatedCount,
         syncedAt: new Date().toISOString()
       });
     } catch (error) {
       console.error("Error syncing from e-paper:", error);
+      
+      // Record failed sync
+      await storage.createSyncStatus({
+        success: "false",
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+        updatedCount: "0",
+      });
+      
       res.status(500).json({ 
         error: "Failed to sync statuses",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get latest sync status
+  app.get("/api/sync/status", isAuthenticated, async (req, res) => {
+    try {
+      const syncStatus = await storage.getLatestSyncStatus();
+      res.json(syncStatus || { success: "true", syncedAt: new Date(), updatedCount: "0" });
+    } catch (error) {
+      console.error("Error fetching sync status:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch sync status",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }
