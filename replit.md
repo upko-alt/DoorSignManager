@@ -10,22 +10,37 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 17, 2025)
 
-### Authentication System Migration
-- **Replaced Replit Auth with username/password authentication**
-  - Removed self-registration capability - only admins can create users
-  - Implemented passport-local strategy with bcrypt password hashing
+### Major Architecture Refactor: Merged Members into Users Table
+- **Simplified Data Model**
+  - Removed separate members table - users now contain status fields directly
+  - Each user has: avatarUrl, currentStatus, customStatusText, lastUpdated
+  - Eliminates unnecessary joins and reduces data redundancy
+  - E-paper sync now uses user.epaperId instead of member.email
+- **Database Migration**
+  - Dropped members table and member_id foreign key from users
+  - Updated status_history to reference users.id instead of members.id
+  - All existing data migrated to new schema structure
+- **Security Hardening**
+  - All API endpoints filter out passwordHash before returning user data
+  - Prevents password hash exposure in responses
+  - Comprehensive sanitization across all user-returning endpoints
+
+### Authentication System
+- **Username/Password Authentication**
+  - Passport-local strategy with bcrypt password hashing
+  - Only admins can create new users (no self-registration)
   - First user created automatically becomes admin
-  - Session-based authentication with secure session management
+  - Session-based authentication with secure cookie management
 
 ### User Management & Authorization
 - **Admin User Management Interface** (`/admin/users`)
   - Admins can create, edit, and delete user accounts
   - Users assigned specific e-paper IDs (e.g., "user1", "user2") for external system integration
   - Role-based access control: regular users vs. administrators
-  - Users can be linked to member profiles for status updates
+  - Removed member assignment UI (users ARE the members now)
 - **Authorization Rules**:
-  - Regular users can only update their own member's status (if assigned)
-  - Admins can update all statuses and manage all users
+  - Regular users can only update their own status (userId-based authorization)
+  - Admins can update any user's status and manage all users
   - Self-deletion prevention for admin accounts
 
 ### Activity Logging & History
@@ -98,32 +113,26 @@ Preferred communication style: Simple, everyday language.
 **Key Design Decision**: The application uses an in-memory storage adapter during development with sample data, but the schema and ORM setup support PostgreSQL for production deployment. This allows rapid development while maintaining production-ready architecture.
 
 ### Database Schema (PostgreSQL via Drizzle ORM)
-- **Users Table** (Authentication):
+- **Users Table** (Combined Authentication & Door Sign Profile):
   - `id`: UUID primary key (auto-generated)
   - `username`: Unique login username
-  - `passwordHash`: Bcrypt-hashed password
-  - `email`, `firstName`, `lastName`: Optional profile information
+  - `passwordHash`: Bcrypt-hashed password (never exposed in API responses)
+  - `email`, `firstName`, `lastName`: Profile information
   - `role`: User role ("admin" or "regular")
-  - `memberId`: Foreign key to members table (optional)
   - `epaperId`: E-paper system identifier (e.g., "user1", "user2")
-  - `createdAt`, `updatedAt`: Timestamps
-
-- **Members Table**:
-  - `id`: UUID primary key (auto-generated)
-  - `name`: Member's full name
-  - `email`: Email address (used for e-paper API routing)
   - `avatarUrl`: Optional profile image URL
-  - `currentStatus`: Current availability status
+  - `currentStatus`: Current availability status (default: "Available")
   - `customStatusText`: Optional custom message (max 50 chars)
   - `lastUpdated`: Timestamp of last status change
+  - `createdAt`, `updatedAt`: Timestamps
 
 - **Status History Table**:
   - `id`: UUID primary key (auto-generated)
-  - `memberId`: Foreign key to members table
+  - `userId`: Foreign key to users table (cascade delete)
   - `status`: Status value at time of change
   - `customStatusText`: Custom message (if any)
   - `changedAt`: Timestamp of status change
-  - `changedBy`: User who made the change (optional)
+  - `changedBy`: Username who made the change (optional)
 
 - **Sync Status Table**:
   - `id`: UUID primary key (auto-generated)
