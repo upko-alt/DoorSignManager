@@ -64,7 +64,11 @@ export class MemStorage implements IStorage {
       const id = randomUUID();
       const member: Member = {
         id,
-        ...memberData,
+        name: memberData.name,
+        email: memberData.email ?? null,
+        avatarUrl: memberData.avatarUrl ?? null,
+        currentStatus: memberData.currentStatus ?? "Available",
+        customStatusText: memberData.customStatusText ?? null,
         lastUpdated: new Date(),
       };
       this.members.set(id, member);
@@ -83,7 +87,11 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const member: Member = {
       id,
-      ...insertMember,
+      name: insertMember.name,
+      email: insertMember.email ?? null,
+      avatarUrl: insertMember.avatarUrl ?? null,
+      currentStatus: insertMember.currentStatus ?? "Available",
+      customStatusText: insertMember.customStatusText ?? null,
       lastUpdated: new Date(),
     };
     this.members.set(id, member);
