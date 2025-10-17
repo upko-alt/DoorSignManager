@@ -5,9 +5,13 @@ import { drizzle } from "drizzle-orm/neon-http";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
-  // User operations (required for Replit Auth)
+  // User operations
   getUser(id: string): Promise<User | undefined>;
-  upsertUser(user: UpsertUser): Promise<User>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(username: string, passwordHash: string, role?: string, memberId?: string, epaperId?: string): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
+  deleteUser(id: string): Promise<void>;
+  getAllUsers(): Promise<User[]>;
   
   // Member operations
   getMembers(): Promise<Member[]>;
@@ -39,7 +43,12 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.username, username));
+    return result[0];
+  }
+
+  async createUser(username: string, passwordHash: string, role: string = "regular", memberId?: string, epaperId?: string): Promise<User> {
     // Check if this is the first user (make them admin)
     const allUsers = await this.db.select().from(users);
     const isFirstUser = allUsers.length === 0;
@@ -47,18 +56,37 @@ export class DbStorage implements IStorage {
     const [user] = await this.db
       .insert(users)
       .values({
-        ...userData,
-        role: isFirstUser ? "admin" : (userData.role || "regular"),
-      })
-      .onConflictDoUpdate({
-        target: users.id,
-        set: {
-          ...userData,
-          updatedAt: new Date(),
-        },
+        username,
+        passwordHash,
+        role: isFirstUser ? "admin" : role,
+        memberId: memberId || null,
+        epaperId: epaperId || null,
+        email: null,
+        firstName: null,
+        lastName: null,
       })
       .returning();
     return user;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    await this.db.delete(users).where(eq(users.id, id));
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const [user] = await this.db
+      .update(users)
+      .set({
+        ...updates,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, id))
+      .returning();
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await this.db.select().from(users);
   }
 
   async getMembers(): Promise<Member[]> {
@@ -198,20 +226,50 @@ export class MemStorage implements IStorage {
     return this.usersMap.get(id);
   }
 
-  async upsertUser(userData: UpsertUser): Promise<User> {
-    const existingUser = this.usersMap.get(userData.id!);
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    return Array.from(this.usersMap.values()).find(u => u.username === username);
+  }
+
+  async createUser(username: string, passwordHash: string, role: string = "regular", memberId?: string, epaperId?: string): Promise<User> {
+    const id = randomUUID();
+    const isFirstUser = this.usersMap.size === 0;
+    
     const user: User = {
-      id: userData.id!,
-      email: userData.email ?? null,
-      firstName: userData.firstName ?? null,
-      lastName: userData.lastName ?? null,
-      profileImageUrl: userData.profileImageUrl ?? null,
-      role: userData.role ?? existingUser?.role ?? "regular",
-      createdAt: existingUser?.createdAt ?? new Date(),
+      id,
+      username,
+      passwordHash,
+      email: null,
+      firstName: null,
+      lastName: null,
+      role: isFirstUser ? "admin" : role,
+      memberId: memberId || null,
+      epaperId: epaperId || null,
+      createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this.usersMap.set(user.id, user);
+    this.usersMap.set(id, user);
     return user;
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    this.usersMap.delete(id);
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const existingUser = this.usersMap.get(id);
+    if (!existingUser) return undefined;
+    
+    const updatedUser = {
+      ...existingUser,
+      ...updates,
+      updatedAt: new Date(),
+    };
+    this.usersMap.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return Array.from(this.usersMap.values());
   }
 
   async getMembers(): Promise<Member[]> {

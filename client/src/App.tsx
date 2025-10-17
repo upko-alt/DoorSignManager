@@ -6,19 +6,28 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
-import Landing from "@/pages/landing";
+import Login from "@/pages/login";
+import AdminUsers from "@/pages/admin-users";
 import NotFound from "@/pages/not-found";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isAdmin, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
+      {!isAuthenticated ? (
+        <>
+          <Route path="/" component={Login} />
+          <Route path="/login" component={Login} />
+        </>
       ) : (
         <>
           <Route path="/" component={Dashboard} />
+          {isAdmin && <Route path="/admin/users" component={AdminUsers} />}
         </>
       )}
       <Route component={NotFound} />
@@ -26,17 +35,15 @@ function Router() {
   );
 }
 
-function App() {
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark">
-        <TooltipProvider>
-          <Toaster />
+      <TooltipProvider>
+        <ThemeProvider>
           <Router />
-        </TooltipProvider>
-      </ThemeProvider>
+          <Toaster />
+        </ThemeProvider>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }
-
-export default App;

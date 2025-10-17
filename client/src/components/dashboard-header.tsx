@@ -1,4 +1,4 @@
-import { RefreshCw, CheckCircle2, AlertCircle, LogOut, Shield } from "lucide-react";
+import { RefreshCw, CheckCircle2, AlertCircle, LogOut, Shield, Users } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 
 interface DashboardHeaderProps {
   totalMembers: number;
@@ -32,15 +33,22 @@ export function DashboardHeader({
   onRefresh,
 }: DashboardHeaderProps) {
   const { user, isAdmin } = useAuth();
+  const [, setLocation] = useLocation();
 
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/logout", { method: "POST" });
+      window.location.href = "/login";
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
   };
 
-  const getInitials = (firstName?: string | null, lastName?: string | null) => {
-    const first = firstName?.[0] || "";
-    const last = lastName?.[0] || "";
-    return (first + last).toUpperCase() || "U";
+  const getInitials = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName[0]}${user.lastName[0]}`.toUpperCase();
+    }
+    return user?.username?.substring(0, 2).toUpperCase() || "U";
   };
 
   return (
@@ -102,8 +110,7 @@ export function DashboardHeader({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-9 w-9 rounded-full" data-testid="button-user-menu">
                   <Avatar className="h-9 w-9">
-                    <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName || "User"} />
-                    <AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback>
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
@@ -111,7 +118,7 @@ export function DashboardHeader({
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none" data-testid="text-user-name">
-                      {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email}
+                      {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.username}
                     </p>
                     {user.email && (
                       <p className="text-xs leading-none text-muted-foreground" data-testid="text-user-email">
@@ -131,6 +138,15 @@ export function DashboardHeader({
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                {isAdmin && (
+                  <>
+                    <DropdownMenuItem onClick={() => setLocation("/admin/users")} data-testid="button-manage-users">
+                      <Users className="mr-2 h-4 w-4" />
+                      <span>Manage Users</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
                 <DropdownMenuItem onClick={handleLogout} data-testid="button-logout">
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>

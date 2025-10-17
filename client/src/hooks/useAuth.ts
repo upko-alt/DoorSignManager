@@ -1,9 +1,20 @@
-// Replit Auth - useAuth hook for client authentication
+// Username/Password Auth - useAuth hook for client authentication
 import { useQuery } from "@tanstack/react-query";
-import { type User } from "@shared/schema";
+
+interface AuthUser {
+  id: string;
+  username: string;
+  email: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  role: string;
+  memberId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export function useAuth() {
-  const { data: user, isLoading } = useQuery<User>({
+  const { data: user, isLoading } = useQuery<AuthUser>({
     queryKey: ["/api/auth/user"],
     retry: false,
   });

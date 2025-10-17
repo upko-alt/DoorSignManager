@@ -2,8 +2,10 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { updateStatusSchema } from "@shared/schema";
-import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
+import { setupAuth, isAuthenticated, isAdmin } from "./auth";
 import { z } from "zod";
+import bcrypt from "bcrypt";
+import passport from "passport";
 
 // E-paper API service
 class EpaperService {
@@ -76,16 +78,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication middleware
   await setupAuth(app);
 
-  // Auth route - get current user
-  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+  // Login route
+  app.post("/api/login", passport.authenticate("local"), (req, res) => {
+    const { passwordHash: _, ...userWithoutPassword } = req.user as any;
+    res.json(userWithoutPassword);
+  });
+
+  // Logout route
+  app.post("/api/logout", (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  // Get current user
+  app.get("/api/auth/user", (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
+    const { passwordHash: _, ...userWithoutPassword } = req.user as any;
+    res.json(userWithoutPassword);
   });
 
   // Get all members (protected - requires login)
@@ -119,14 +134,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update member status (protected - requires admin role)
-  app.post("/api/members/status", isAuthenticated, isAdmin, async (req, res) => {
+  // Update member status (protected - requires login, users can only update their own status)
+  app.post("/api/members/status", isAuthenticated, async (req: any, res) => {
     try {
       const validated = updateStatusSchema.parse(req.body);
+      const currentUser = req.user;
       
       const member = await storage.getMember(validated.memberId);
       if (!member) {
         return res.status(404).json({ error: "Member not found" });
+      }
+
+      // Check authorization: admin can update any, regular user can only update their own
+      if (currentUser.role !== "admin" && currentUser.memberId !== validated.memberId) {
+        return res.status(403).json({ error: "You can only update your own status" });
       }
 
       // Update status in local storage
@@ -146,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           memberId: validated.memberId,
           status: validated.status,
           customStatusText: validated.customText || null,
-          changedBy: null, // Will be updated when we add user authentication
+          changedBy: currentUser.username,
         });
       } catch (historyError) {
         console.error("Failed to log status change to history:", historyError);
@@ -198,6 +219,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: "Failed to fetch status history",
         message: error instanceof Error ? error.message : "Unknown error"
       });
+    }
+  });
+
+  // Admin routes - User management
+  app.get("/api/users", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      // Remove password hashes from response
+      const usersWithoutPasswords = users.map(({ passwordHash, ...user }) => user);
+      res.json(usersWithoutPasswords);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ error: "Failed to fetch users" });
+    }
+  });
+
+  app.post("/api/users", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { username, password, role, memberId, epaperId, firstName, lastName, email } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password are required" });
+      }
+
+      // Check if username already exists
+      const existingUser = await storage.getUserByUsername(username);
+      if (existingUser) {
+        return res.status(400).json({ error: "Username already exists" });
+      }
+
+      // Hash password
+      const passwordHash = await bcrypt.hash(password, 10);
+
+      // Create user
+      const user = await storage.createUser(username, passwordHash, role || "regular", memberId, epaperId);
+      
+      // Update additional fields if provided
+      if (firstName || lastName || email) {
+        const updates: any = {};
+        if (firstName) updates.firstName = firstName;
+        if (lastName) updates.lastName = lastName;
+        if (email) updates.email = email;
+        await storage.updateUser(user.id, updates);
+      }
+
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error creating user:", error);
+      res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+
+  app.patch("/api/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { role, memberId, epaperId, firstName, lastName, email, password } = req.body;
+      
+      const updates: Partial<User> = {};
+      if (role) updates.role = role;
+      if (memberId !== undefined) updates.memberId = memberId;
+      if (epaperId !== undefined) updates.epaperId = epaperId;
+      if (firstName !== undefined) updates.firstName = firstName;
+      if (lastName !== undefined) updates.lastName = lastName;
+      if (email !== undefined) updates.email = email;
+      
+      // Update password if provided
+      if (password) {
+        updates.passwordHash = await bcrypt.hash(password, 10);
+      }
+      
+      const updatedUser = await storage.updateUser(id, updates);
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const { passwordHash, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error) {
+      console.error("Error updating user:", error);
+      res.status(500).json({ error: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/users/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const currentUser = (req as any).user;
+      
+      // Prevent deleting yourself
+      if (id === currentUser.id) {
+        return res.status(400).json({ error: "Cannot delete your own account" });
+      }
+      
+      await storage.deleteUser(id);
+      res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      res.status(500).json({ error: "Failed to delete user" });
     }
   });
 
