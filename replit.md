@@ -51,6 +51,21 @@ Preferred communication style: Simple, everyday language.
   - Added sync_status and status_history tables
   - Schema managed via Drizzle ORM
 
+### Dynamic Status Options Management
+- **Admin Status Options Interface** (`/admin/status-options`)
+  - Admins can create, edit, delete, and reorder status options
+  - Each status has a name, color variant (success/warning/destructive/secondary/outline), and sort order
+  - System validates all inputs: name (1-50 chars), color (enum), sortOrder (numeric string)
+  - Database seeded with default statuses: Available, In Meeting, Out, Do Not Disturb, Be Right Back
+- **Dynamic Status Display**
+  - Dashboard and components fetch status options from database instead of using hardcoded values
+  - StatusBadge component uses prop-based status options to eliminate redundant queries
+  - Status colors dynamically mapped based on database configuration
+- **Validation & Stability**
+  - Zod validation enforces strict constraints on all CRUD operations
+  - NaN-safe numeric sorting ensures deterministic status ordering
+  - Empty PATCH body validation prevents malformed update requests
+
 **Test Credentials**: First admin user - username: "admin", password: "admin123"
 
 ## System Architecture
@@ -116,6 +131,12 @@ Preferred communication style: Simple, everyday language.
   - `success`: "true" or "false" indicating sync result
   - `errorMessage`: Error details (if sync failed)
   - `updatedCount`: Number of members updated
+
+- **Status Options Table**:
+  - `id`: UUID primary key (auto-generated)
+  - `name`: Status name (e.g., "Available", "In Meeting")
+  - `color`: Badge color variant (success, warning, destructive, secondary, outline)
+  - `sortOrder`: Numeric string for display ordering (validated with regex, NaN-safe sorting)
 
 **Key Design Decision**: Username/password authentication with role-based access control. First user created automatically becomes admin. E-paper ID field allows matching users to external system identifiers.
 
