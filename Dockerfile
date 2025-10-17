@@ -1,38 +1,30 @@
 # Multi-stage build for E-Paper Dashboard
 
-# Stage 1: Build frontend
-FROM node:20-alpine AS frontend-builder
+# Stage 1: Dependencies
+FROM node:20-alpine AS deps
 
 WORKDIR /app
 
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
+# Install all dependencies (including dev dependencies for build)
 RUN npm ci
+
+# Stage 2: Build
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy dependencies from deps stage
+COPY --from=deps /app/node_modules ./node_modules
 
 # Copy source code
 COPY . .
 
-# Build frontend
+# Build frontend and backend
+# Frontend builds to dist/public, backend builds to dist/
 RUN npm run build
-
-# Stage 2: Build backend
-FROM node:20-alpine AS backend-builder
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm ci
-
-# Copy source code
-COPY . .
-
-# Build backend
-RUN npx esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
 
 # Stage 3: Production
 FROM node:20-alpine
@@ -43,11 +35,10 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Copy built artifacts from previous stages
-COPY --from=frontend-builder /app/dist/client ./dist/client
-COPY --from=backend-builder /app/dist ./dist
+# Copy built artifacts from builder stage
+COPY --from=builder /app/dist ./dist
 
-# Copy necessary files
+# Copy necessary runtime files
 COPY shared ./shared
 COPY drizzle.config.ts ./
 
