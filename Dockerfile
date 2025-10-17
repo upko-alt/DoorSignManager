@@ -1,32 +1,5 @@
-# Multi-stage build for E-Paper Dashboard
+# Optimized Dockerfile for faster builds
 
-# Stage 1: Dependencies
-FROM node:20-alpine AS deps
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install all dependencies (including dev dependencies for build)
-RUN npm ci
-
-# Stage 2: Build
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-# Copy dependencies from deps stage
-COPY --from=deps /app/node_modules ./node_modules
-
-# Copy source code
-COPY . .
-
-# Build frontend and backend
-# Frontend builds to dist/public, backend builds to dist/
-RUN npm run build
-
-# Stage 3: Production
 FROM node:20-alpine
 
 WORKDIR /app
@@ -34,11 +7,17 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies AND drizzle-kit for migrations
-RUN npm ci --omit=dev && npm install drizzle-kit
+# Install ALL dependencies (we need them for build)
+RUN npm ci
 
-# Copy built artifacts from builder stage
-COPY --from=builder /app/dist ./dist
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Remove dev dependencies to save space (keep drizzle-kit for migrations)
+RUN npm prune --production && npm install drizzle-kit
 
 # Copy necessary runtime files
 COPY shared ./shared
@@ -47,16 +26,11 @@ COPY drizzle.config.ts ./
 # Create logs directory
 RUN mkdir -p logs
 
-# Set environment variables
+# Environment
 ENV NODE_ENV=production
 ENV PORT=5000
 
-# Expose port
 EXPOSE 5000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/api/user', (r) => {process.exit(r.statusCode === 401 ? 0 : 1)})"
-
-# Start the application
-CMD ["node", "dist/index.js"]
+# Start command
+CMD ["sh", "-c", "npx drizzle-kit push --force && node dist/index.js"]

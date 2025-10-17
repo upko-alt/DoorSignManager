@@ -137,7 +137,18 @@ docker compose up -d
 # ✅ Start Nginx reverse proxy
 ```
 
-**First time?** Building may take 2-5 minutes.
+**First time?** Building may take 3-5 minutes.
+
+### If Build is Taking Too Long (>10 minutes)
+
+Your server might be low on memory. Run the fix script:
+
+```bash
+chmod +x docker-fix.sh
+./docker-fix.sh
+```
+
+This adds swap space and uses an optimized build process.
 
 ## Step 6: Verify Deployment
 
