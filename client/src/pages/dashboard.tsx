@@ -71,7 +71,9 @@ export default function Dashboard() {
         return next;
       });
       
+      // Invalidate member list and member's status history
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/members", update.memberId, "history"] });
     },
   });
 
