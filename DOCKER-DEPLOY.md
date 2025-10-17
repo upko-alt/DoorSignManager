@@ -1,6 +1,14 @@
 # 🐳 Docker Compose Deployment Guide
 
-Deploy the E-Paper Dashboard to your DigitalOcean Droplet using Docker Compose - the easiest way!
+## ⚠️ IMPORTANT: This is for Deploying to YOUR OWN SERVER!
+
+**You CANNOT run Docker on Replit!** These instructions are for deploying to a **DigitalOcean Droplet** or other Linux server.
+
+**If you're on Replit:**
+- For development: Use `npm run dev`
+- For production: Click the **"Publish"** button
+
+**If you have your own server:** Follow this guide to deploy with Docker Compose - the easiest way!
 
 ## Why Docker Compose?
 

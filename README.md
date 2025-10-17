@@ -69,11 +69,19 @@ A real-time door sign management system that syncs availability status to physic
 
 ## Production Deployment
 
-### Option 1: Docker Compose (Recommended - Easiest!)
+### Option 1: Replit Deployment (Easiest!)
+
+Simply click **"Publish"** in Replit - automatic deployment with built-in SSL and domain.
+
+**No setup required!**
+
+### Option 2: Docker Compose (For Your Own Server)
+
+**⚠️ Important:** Docker files are for deploying to **your own server** (DigitalOcean, AWS, etc.), **NOT for running on Replit!**
 
 **Complete Docker guide:** **[DOCKER-DEPLOY.md](./DOCKER-DEPLOY.md)**
 
-The easiest way to deploy! Everything in one command:
+For self-hosted deployment on your own server:
 
 ```bash
 # After uploading code to your server:
@@ -113,11 +121,7 @@ Manual setup with PM2 and Nginx:
 
 **Quick start for experienced users:** [deploy/quick-start.md](./deploy/quick-start.md)
 
-### Option 3: Replit Deployment
-
-Simply click "Publish" in Replit - automatic deployment with built-in SSL and domain.
-
-### Option 4: Other Platforms
+### Option 3: Other Platforms
 
 Works on any Node.js hosting:
 - Railway
