@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StatusBadge } from "./status-badge";
-import { Check, Clock, XCircle, BellOff, RotateCw, Loader2 } from "lucide-react";
+import { StatusHistoryDialog } from "./status-history-dialog";
+import { Check, Clock, XCircle, BellOff, RotateCw, Loader2, History } from "lucide-react";
 import type { Member } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
@@ -33,6 +34,7 @@ const STATUS_COLORS = {
 export function MemberStatusCard({ member, onUpdateStatus, isUpdating }: MemberStatusCardProps) {
   const [customText, setCustomText] = useState(member.customStatusText || "");
   const [selectedStatus, setSelectedStatus] = useState<string>(member.currentStatus);
+  const [showHistory, setShowHistory] = useState(false);
 
   const handleStatusClick = (status: string) => {
     setSelectedStatus(status);
@@ -85,6 +87,15 @@ export function MemberStatusCard({ member, onUpdateStatus, isUpdating }: MemberS
         <div className="flex items-center justify-between gap-2">
           <StatusBadge status={member.currentStatus} />
           <div className="flex items-center gap-1.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowHistory(true)}
+              className="h-7 w-7"
+              data-testid={`button-view-history-${member.id}`}
+            >
+              <History className="h-4 w-4" />
+            </Button>
             {isUpdating && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" data-testid={`loader-updating-${member.id}`} />}
             <span className="text-xs text-muted-foreground" data-testid={`text-last-updated-${member.id}`}>
               {formatDistanceToNow(new Date(member.lastUpdated), { addSuffix: true })}
@@ -157,6 +168,12 @@ export function MemberStatusCard({ member, onUpdateStatus, isUpdating }: MemberS
           </div>
         </div>
       </CardContent>
+      
+      <StatusHistoryDialog 
+        member={member} 
+        open={showHistory} 
+        onOpenChange={setShowHistory} 
+      />
     </Card>
   );
 }

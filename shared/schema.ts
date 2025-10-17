@@ -42,6 +42,24 @@ export const updateStatusSchema = z.object({
 
 export type UpdateStatus = z.infer<typeof updateStatusSchema>;
 
+// Status history table to track all status changes
+export const statusHistory = pgTable("status_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  memberId: varchar("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  status: text("status").notNull(),
+  customStatusText: text("custom_status_text"),
+  changedAt: timestamp("changed_at").notNull().defaultNow(),
+  changedBy: varchar("changed_by"), // Will be used for user tracking later
+});
+
+export const insertStatusHistorySchema = createInsertSchema(statusHistory).omit({
+  id: true,
+  changedAt: true,
+});
+
+export type InsertStatusHistory = z.infer<typeof insertStatusHistorySchema>;
+export type StatusHistory = typeof statusHistory.$inferSelect;
+
 // E-paper sync status
 export interface EpaperSyncStatus {
   lastSync: Date;

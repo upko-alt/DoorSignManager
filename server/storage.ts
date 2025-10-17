@@ -1,18 +1,80 @@
-import { type Member, type InsertMember } from "@shared/schema";
+import { type Member, type InsertMember, type StatusHistory, type InsertStatusHistory, members, statusHistory } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/neon-http";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   getMembers(): Promise<Member[]>;
   getMember(id: string): Promise<Member | undefined>;
   createMember(member: InsertMember): Promise<Member>;
   updateMemberStatus(id: string, status: string, customText?: string): Promise<Member | undefined>;
+  getStatusHistory(memberId: string): Promise<StatusHistory[]>;
+  createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory>;
+}
+
+// Database storage implementation
+export class DbStorage implements IStorage {
+  private db: ReturnType<typeof drizzle>;
+
+  constructor() {
+    const sql = neon(process.env.DATABASE_URL!);
+    this.db = drizzle(sql);
+  }
+
+  async getMembers(): Promise<Member[]> {
+    return await this.db.select().from(members);
+  }
+
+  async getMember(id: string): Promise<Member | undefined> {
+    const result = await this.db.select().from(members).where(eq(members.id, id));
+    return result[0];
+  }
+
+  async createMember(insertMember: InsertMember): Promise<Member> {
+    const result = await this.db.insert(members).values(insertMember).returning();
+    return result[0];
+  }
+
+  async updateMemberStatus(
+    id: string,
+    status: string,
+    customText?: string
+  ): Promise<Member | undefined> {
+    const result = await this.db
+      .update(members)
+      .set({
+        currentStatus: status,
+        customStatusText: customText || null,
+        lastUpdated: new Date(),
+      })
+      .where(eq(members.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async getStatusHistory(memberId: string): Promise<StatusHistory[]> {
+    return await this.db
+      .select()
+      .from(statusHistory)
+      .where(eq(statusHistory.memberId, memberId))
+      .orderBy(desc(statusHistory.changedAt));
+  }
+
+  async createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory> {
+    const result = await this.db.insert(statusHistory).values(history).returning();
+    return result[0];
+  }
 }
 
 export class MemStorage implements IStorage {
   private members: Map<string, Member>;
+  private history: Map<string, StatusHistory[]>;
 
   constructor() {
     this.members = new Map();
+    this.history = new Map();
     
     // Add some initial sample members for demo
     const sampleMembers: InsertMember[] = [
@@ -72,6 +134,7 @@ export class MemStorage implements IStorage {
         lastUpdated: new Date(),
       };
       this.members.set(id, member);
+      this.history.set(id, []);
     });
   }
 
@@ -95,6 +158,7 @@ export class MemStorage implements IStorage {
       lastUpdated: new Date(),
     };
     this.members.set(id, member);
+    this.history.set(id, []);
     return member;
   }
 
@@ -118,6 +182,29 @@ export class MemStorage implements IStorage {
     this.members.set(id, updatedMember);
     return updatedMember;
   }
+
+  async getStatusHistory(memberId: string): Promise<StatusHistory[]> {
+    return this.history.get(memberId) || [];
+  }
+
+  async createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory> {
+    const id = randomUUID();
+    const record: StatusHistory = {
+      id,
+      memberId: history.memberId,
+      status: history.status,
+      customStatusText: history.customStatusText ?? null,
+      changedBy: history.changedBy ?? null,
+      changedAt: new Date(),
+    };
+    
+    const memberHistory = this.history.get(history.memberId) || [];
+    memberHistory.unshift(record);
+    this.history.set(history.memberId, memberHistory);
+    
+    return record;
+  }
 }
 
-export const storage = new MemStorage();
+// Use database storage in production, memory storage for development
+export const storage = process.env.DATABASE_URL ? new DbStorage() : new MemStorage();

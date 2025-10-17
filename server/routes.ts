@@ -124,6 +124,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Failed to update member" });
       }
 
+      // Log status change to history
+      try {
+        await storage.createStatusHistory({
+          memberId: validated.memberId,
+          status: validated.status,
+          customStatusText: validated.customText || null,
+          changedBy: null, // Will be updated when we add user authentication
+        });
+      } catch (historyError) {
+        console.error("Failed to log status change to history:", historyError);
+      }
+
       // Send update to e-paper system
       try {
         if (member.email) {
@@ -149,6 +161,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating member status:", error);
       res.status(500).json({ 
         error: "Failed to update status",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Get status history for a member
+  app.get("/api/members/:id/history", async (req, res) => {
+    try {
+      const member = await storage.getMember(req.params.id);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      
+      const history = await storage.getStatusHistory(req.params.id);
+      res.json(history);
+    } catch (error) {
+      console.error("Error fetching status history:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch status history",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }
