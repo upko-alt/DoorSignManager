@@ -1,9 +1,11 @@
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 import { members, type InsertMember } from "@shared/schema";
 
-const sql = neon(process.env.DATABASE_URL!);
-const db = drizzle(sql);
+const pool = new pg.Pool({
+  connectionString: process.env.DATABASE_URL!,
+});
+const db = drizzle(pool);
 
 const sampleMembers: InsertMember[] = [
   {

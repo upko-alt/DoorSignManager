@@ -1,0 +1,98 @@
+epaper-app  | NeonDbError: Error connecting to database: fetch failed
+epaper-app  |     at execute (file:///app/node_modules/@neondatabase/serverless/index.mjs:1549:24)
+epaper-app  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+epaper-app  |     at async NeonHttpPreparedQuery.execute (file:///app/node_modules/drizzle-orm/neon-http/session.js:40:20)
+epaper-app  |     at async DbStorage.createSyncStatus (file:///app/dist/index.js:188:20)
+epaper-app  |     at async SyncService.performSync (file:///app/dist/index.js:1030:7) {
+epaper-app  |   severity: undefined,
+epaper-app  |   code: undefined,
+epaper-app  |   detail: undefined,
+epaper-app  |   hint: undefined,
+epaper-app  |   position: undefined,
+epaper-app  |   internalPosition: undefined,
+epaper-app  |   internalQuery: undefined,
+epaper-app  |   where: undefined,
+epaper-app  |   schema: undefined,
+epaper-app  |   table: undefined,
+epaper-app  |   column: undefined,
+epaper-app  |   dataType: undefined,
+epaper-app  |   constraint: undefined,
+epaper-app  |   file: undefined,
+epaper-app  |   line: undefined,
+epaper-app  |   routine: undefined,
+epaper-app  |   sourceError: TypeError: fetch failed
+epaper-app  |       at node:internal/deps/undici/undici:13510:13
+epaper-app  |       at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+epaper-app  |       at async execute (file:///app/node_modules/@neondatabase/serverless/index.mjs:1548:15)
+epaper-app  |       at async NeonHttpPreparedQuery.execute (file:///app/node_modules/drizzle-orm/neon-http/session.js:40:20)
+epaper-app  |       at async DbStorage.createSyncStatus (file:///app/dist/index.js:188:20)
+epaper-app  |       at async SyncService.performSync (file:///app/dist/index.js:1030:7) {
+epaper-app  |     [cause]: Error: connect ECONNREFUSED 172.18.0.2:443
+epaper-app  |         at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16) {
+epaper-app  |       errno: -111,
+epaper-app  |       code: 'ECONNREFUSED',
+epaper-app  |       syscall: 'connect',
+epaper-app  |       address: '172.18.0.2',
+epaper-app  |       port: 443
+epaper-app  |     }
+epaper-app  |   }
+epaper-app  | }
+epaper-app  | 
+epaper-app  | Node.js v20.19.5
+epaper-app  | No config path provided, using default 'drizzle.config.ts'
+epaper-app  | Reading config file '/app/drizzle.config.ts'
+epaper-app  | Using 'pg' driver for database querying
+epaper-app  | [⣷] Pulling schema from database...
+[⣯] Pulling schema from database...
+[⣟] Pulling schema from database...
+[⡿] Pulling schema from database...
+[✓] Pulling schema from database...
+epaper-app  | [i] No changes detected
+epaper-app  | [Sync Service] Starting periodic sync every 5 minutes
+epaper-app  | [Sync Service] Starting periodic sync...
+epaper-app  | [Sync Service] Sync failed: E-paper export credentials not configured
+epaper-app  | 5:26:26 PM [express] serving on port 5000
+epaper-app  | file:///app/node_modules/@neondatabase/serverless/index.mjs:1549
+epaper-app  | ...ee})}catch(W){let H=new pe(`Error connecting to database: ${W.message}`);throw H.
+epaper-app  |                        ^
+epaper-app  | 
+epaper-app  | NeonDbError: Error connecting to database: fetch failed
+epaper-app  |     at execute (file:///app/node_modules/@neondatabase/serverless/index.mjs:1549:24)
+epaper-app  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+epaper-app  |     at async NeonHttpPreparedQuery.execute (file:///app/node_modules/drizzle-orm/neon-http/session.js:40:20)
+epaper-app  |     at async DbStorage.createSyncStatus (file:///app/dist/index.js:188:20)
+epaper-app  |     at async SyncService.performSync (file:///app/dist/index.js:1030:7) {
+epaper-app  |   severity: undefined,
+epaper-app  |   code: undefined,
+epaper-app  |   detail: undefined,
+epaper-app  |   hint: undefined,
+epaper-app  |   position: undefined,
+epaper-app  |   internalPosition: undefined,
+epaper-app  |   internalQuery: undefined,
+epaper-app  |   where: undefined,
+epaper-app  |   schema: undefined,
+epaper-app  |   table: undefined,
+epaper-app  |   column: undefined,
+epaper-app  |   dataType: undefined,
+epaper-app  |   constraint: undefined,
+epaper-app  |   file: undefined,
+epaper-app  |   line: undefined,
+epaper-app  |   routine: undefined,
+epaper-app  |   sourceError: TypeError: fetch failed
+epaper-app  |       at node:internal/deps/undici/undici:13510:13
+epaper-app  |       at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+epaper-app  |       at async execute (file:///app/node_modules/@neondatabase/serverless/index.mjs:1548:15)
+epaper-app  |       at async NeonHttpPreparedQuery.execute (file:///app/node_modules/drizzle-orm/neon-http/session.js:40:20)
+epaper-app  |       at async DbStorage.createSyncStatus (file:///app/dist/index.js:188:20)
+epaper-app  |       at async SyncService.performSync (file:///app/dist/index.js:1030:7) {
+epaper-app  |     [cause]: Error: connect ECONNREFUSED 172.18.0.2:443
+epaper-app  |         at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1611:16) {
+epaper-app  |       errno: -111,
+epaper-app  |       code: 'ECONNREFUSED',
+epaper-app  |       syscall: 'connect',
+epaper-app  |       address: '172.18.0.2',
+epaper-app  |       port: 443
+epaper-app  |     }
+epaper-app  |   }
+epaper-app  | }
+epaper-app  | 

@@ -5,7 +5,6 @@ import { storage } from "./storage";
 import bcrypt from "bcrypt";
 import session from "express-session";
 import ConnectPg from "connect-pg-simple";
-import { neon } from "@neondatabase/serverless";
 
 const PgSession = ConnectPg(session);
 

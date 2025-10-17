@@ -1,7 +1,7 @@
 import { type Member, type InsertMember, type StatusHistory, type InsertStatusHistory, type User, type SyncStatus, type InsertSyncStatus, type StatusOption, type InsertStatusOption, members, statusHistory, users, syncStatus, statusOptions } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { neon } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-http";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
@@ -40,8 +40,10 @@ export class DbStorage implements IStorage {
   private db: ReturnType<typeof drizzle>;
 
   constructor() {
-    const sql = neon(process.env.DATABASE_URL!);
-    this.db = drizzle(sql);
+    const pool = new pg.Pool({
+      connectionString: process.env.DATABASE_URL!,
+    });
+    this.db = drizzle(pool);
   }
 
   // User operations
