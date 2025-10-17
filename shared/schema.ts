@@ -60,7 +60,32 @@ export const insertMemberSchema = createInsertSchema(members).omit({
 export type InsertMember = z.infer<typeof insertMemberSchema>;
 export type Member = typeof members.$inferSelect;
 
-// Predefined status options
+// Status options table for configurable predefined statuses
+export const statusOptions = pgTable("status_options", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name").notNull().unique(),
+  color: varchar("color").notNull().default("blue"), // color indicator for UI
+  sortOrder: varchar("sort_order").notNull().default("0"), // for custom ordering (stored as string for compatibility)
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertStatusOptionSchema = createInsertSchema(statusOptions)
+  .omit({
+    id: true,
+    createdAt: true,
+  })
+  .extend({
+    name: z.string().min(1, "Name is required").max(50, "Name must be 50 characters or less"),
+    color: z.enum(["blue", "green", "red", "yellow", "purple", "orange", "gray"], {
+      errorMap: () => ({ message: "Invalid color" })
+    }),
+    sortOrder: z.string().regex(/^\d+$/, "Sort order must be a positive number").default("0"),
+  });
+
+export type InsertStatusOption = z.infer<typeof insertStatusOptionSchema>;
+export type StatusOption = typeof statusOptions.$inferSelect;
+
+// Default status options (kept for backward compatibility and seeding)
 export const PREDEFINED_STATUSES = [
   "Available",
   "In Meeting",

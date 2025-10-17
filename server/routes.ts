@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { updateStatusSchema } from "@shared/schema";
+import { updateStatusSchema, insertStatusOptionSchema } from "@shared/schema";
 import { setupAuth, isAuthenticated, isAdmin } from "./auth";
 import { z } from "zod";
 import bcrypt from "bcrypt";
@@ -318,6 +318,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+
+  // Admin routes - Status Options management
+  app.get("/api/status-options", isAuthenticated, async (req, res) => {
+    try {
+      const options = await storage.getAllStatusOptions();
+      res.json(options);
+    } catch (error) {
+      console.error("Error fetching status options:", error);
+      res.status(500).json({ error: "Failed to fetch status options" });
+    }
+  });
+
+  app.post("/api/status-options", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const validated = insertStatusOptionSchema.parse(req.body);
+      const option = await storage.createStatusOption(validated);
+      res.json(option);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid request data",
+          details: error.errors 
+        });
+      }
+      console.error("Error creating status option:", error);
+      res.status(500).json({ error: "Failed to create status option" });
+    }
+  });
+
+  app.patch("/api/status-options/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const validated = insertStatusOptionSchema.partial().parse(req.body);
+      
+      // Require at least one field to update
+      if (Object.keys(validated).length === 0) {
+        return res.status(400).json({ error: "At least one field is required to update" });
+      }
+      
+      const updatedOption = await storage.updateStatusOption(id, validated);
+      if (!updatedOption) {
+        return res.status(404).json({ error: "Status option not found" });
+      }
+      
+      res.json(updatedOption);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid request data",
+          details: error.errors 
+        });
+      }
+      console.error("Error updating status option:", error);
+      res.status(500).json({ error: "Failed to update status option" });
+    }
+  });
+
+  app.delete("/api/status-options/:id", isAuthenticated, isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      await storage.deleteStatusOption(id);
+      res.json({ message: "Status option deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting status option:", error);
+      res.status(500).json({ error: "Failed to delete status option" });
     }
   });
 

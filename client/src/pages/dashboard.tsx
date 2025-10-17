@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { Member, UpdateStatus } from "@shared/schema";
+import type { Member, UpdateStatus, StatusOption } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
 import { AlertCircle, Shield } from "lucide-react";
@@ -21,6 +21,11 @@ export default function Dashboard() {
   const { data: members = [], isLoading, error } = useQuery<Member[]>({
     queryKey: ["/api/members"],
     refetchInterval: 30000, // Auto-refresh every 30 seconds
+  });
+
+  // Fetch status options
+  const { data: statusOptions = [] } = useQuery<StatusOption[]>({
+    queryKey: ["/api/status-options"],
   });
 
   // Fetch sync status
@@ -240,6 +245,7 @@ export default function Dashboard() {
                 onUpdateStatus={handleUpdateStatus}
                 isUpdating={updatingMembers.has(member.id)}
                 readOnly={!isAdmin}
+                statusOptions={statusOptions}
               />
             ))}
           </div>

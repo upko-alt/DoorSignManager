@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { type Member, type StatusHistory } from "@shared/schema";
+import { type Member, type StatusHistory, type StatusOption } from "@shared/schema";
 import { StatusBadge } from "./status-badge";
 import { format } from "date-fns";
 import { Clock } from "lucide-react";
@@ -10,9 +10,10 @@ interface StatusHistoryDialogProps {
   member: Member;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  statusOptions: StatusOption[];
 }
 
-export function StatusHistoryDialog({ member, open, onOpenChange }: StatusHistoryDialogProps) {
+export function StatusHistoryDialog({ member, open, onOpenChange, statusOptions }: StatusHistoryDialogProps) {
   const { data: history, isLoading } = useQuery<StatusHistory[]>({
     queryKey: ["/api/members", member.id, "history"],
     enabled: open,
@@ -44,7 +45,7 @@ export function StatusHistoryDialog({ member, open, onOpenChange }: StatusHistor
                   <Clock className="h-4 w-4 mt-1 text-muted-foreground" />
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                      <StatusBadge status={entry.status} className="scale-90" />
+                      <StatusBadge status={entry.status} statusOptions={statusOptions} className="scale-90" />
                       <span className="text-xs text-muted-foreground" data-testid={`text-history-time-${index}`}>
                         {format(new Date(entry.changedAt), "MMM d, yyyy 'at' h:mm a")}
                       </span>

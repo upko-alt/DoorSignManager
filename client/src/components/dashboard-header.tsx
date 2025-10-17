@@ -1,4 +1,4 @@
-import { RefreshCw, CheckCircle2, AlertCircle, LogOut, Shield, Users } from "lucide-react";
+import { RefreshCw, CheckCircle2, AlertCircle, LogOut, Shield, Users, Settings } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -143,6 +143,10 @@ export function DashboardHeader({
                     <DropdownMenuItem onClick={() => setLocation("/admin/users")} data-testid="button-manage-users">
                       <Users className="mr-2 h-4 w-4" />
                       <span>Manage Users</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setLocation("/admin/status-options")} data-testid="button-manage-status-options">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Manage Status Options</span>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                   </>

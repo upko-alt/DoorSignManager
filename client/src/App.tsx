@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Dashboard from "@/pages/dashboard";
 import Login from "@/pages/login";
 import AdminUsers from "@/pages/admin-users";
+import AdminStatusOptions from "@/pages/admin-status-options";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -28,6 +29,7 @@ function Router() {
         <>
           <Route path="/" component={Dashboard} />
           {isAdmin && <Route path="/admin/users" component={AdminUsers} />}
+          {isAdmin && <Route path="/admin/status-options" component={AdminStatusOptions} />}
         </>
       )}
       <Route component={NotFound} />

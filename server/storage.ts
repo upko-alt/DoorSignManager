@@ -1,4 +1,4 @@
-import { type Member, type InsertMember, type StatusHistory, type InsertStatusHistory, type User, type UpsertUser, type SyncStatus, type InsertSyncStatus, members, statusHistory, users, syncStatus } from "@shared/schema";
+import { type Member, type InsertMember, type StatusHistory, type InsertStatusHistory, type User, type SyncStatus, type InsertSyncStatus, type StatusOption, type InsertStatusOption, members, statusHistory, users, syncStatus, statusOptions } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
@@ -26,6 +26,13 @@ export interface IStorage {
   // Sync status operations
   getLatestSyncStatus(): Promise<SyncStatus | undefined>;
   createSyncStatus(status: InsertSyncStatus): Promise<SyncStatus>;
+  
+  // Status options operations
+  getAllStatusOptions(): Promise<StatusOption[]>;
+  getStatusOption(id: string): Promise<StatusOption | undefined>;
+  createStatusOption(option: InsertStatusOption): Promise<StatusOption>;
+  updateStatusOption(id: string, updates: Partial<InsertStatusOption>): Promise<StatusOption | undefined>;
+  deleteStatusOption(id: string): Promise<void>;
 }
 
 // Database storage implementation
@@ -147,17 +154,56 @@ export class DbStorage implements IStorage {
     const result = await this.db.insert(syncStatus).values(status).returning();
     return result[0];
   }
+
+  async getAllStatusOptions(): Promise<StatusOption[]> {
+    const options = await this.db.select().from(statusOptions);
+    // Sort by numeric value of sortOrder since it's stored as string
+    // Filter out and handle invalid sortOrder values
+    return options.sort((a, b) => {
+      const aOrder = parseInt(a.sortOrder);
+      const bOrder = parseInt(b.sortOrder);
+      // Handle NaN by treating invalid values as having highest sort order
+      if (isNaN(aOrder)) return 1;
+      if (isNaN(bOrder)) return -1;
+      return aOrder - bOrder;
+    });
+  }
+
+  async getStatusOption(id: string): Promise<StatusOption | undefined> {
+    const result = await this.db.select().from(statusOptions).where(eq(statusOptions.id, id));
+    return result[0];
+  }
+
+  async createStatusOption(option: InsertStatusOption): Promise<StatusOption> {
+    const result = await this.db.insert(statusOptions).values(option).returning();
+    return result[0];
+  }
+
+  async updateStatusOption(id: string, updates: Partial<InsertStatusOption>): Promise<StatusOption | undefined> {
+    const result = await this.db
+      .update(statusOptions)
+      .set(updates)
+      .where(eq(statusOptions.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async deleteStatusOption(id: string): Promise<void> {
+    await this.db.delete(statusOptions).where(eq(statusOptions.id, id));
+  }
 }
 
 export class MemStorage implements IStorage {
   private members: Map<string, Member>;
   private history: Map<string, StatusHistory[]>;
   private usersMap: Map<string, User>;
+  private statusOptionsMap: Map<string, StatusOption>;
 
   constructor() {
     this.members = new Map();
     this.history = new Map();
     this.usersMap = new Map();
+    this.statusOptionsMap = new Map();
     
     // Add some initial sample members for demo
     const sampleMembers: InsertMember[] = [
@@ -349,10 +395,54 @@ export class MemStorage implements IStorage {
     return {
       id: randomUUID(),
       syncedAt: new Date(),
-      success: status.success,
+      success: status.success ?? "true",
       errorMessage: status.errorMessage ?? null,
-      updatedCount: status.updatedCount,
+      updatedCount: status.updatedCount ?? "0",
     };
+  }
+
+  async getAllStatusOptions(): Promise<StatusOption[]> {
+    return Array.from(this.statusOptionsMap.values()).sort((a, b) => {
+      const aOrder = parseInt(a.sortOrder);
+      const bOrder = parseInt(b.sortOrder);
+      // Handle NaN by treating invalid values as having highest sort order
+      if (isNaN(aOrder)) return 1;
+      if (isNaN(bOrder)) return -1;
+      return aOrder - bOrder;
+    });
+  }
+
+  async getStatusOption(id: string): Promise<StatusOption | undefined> {
+    return this.statusOptionsMap.get(id);
+  }
+
+  async createStatusOption(option: InsertStatusOption): Promise<StatusOption> {
+    const id = randomUUID();
+    const newOption: StatusOption = {
+      id,
+      name: option.name,
+      color: option.color ?? "blue",
+      sortOrder: option.sortOrder ?? "0",
+      createdAt: new Date(),
+    };
+    this.statusOptionsMap.set(id, newOption);
+    return newOption;
+  }
+
+  async updateStatusOption(id: string, updates: Partial<InsertStatusOption>): Promise<StatusOption | undefined> {
+    const existing = this.statusOptionsMap.get(id);
+    if (!existing) return undefined;
+    
+    const updated: StatusOption = {
+      ...existing,
+      ...updates,
+    };
+    this.statusOptionsMap.set(id, updated);
+    return updated;
+  }
+
+  async deleteStatusOption(id: string): Promise<void> {
+    this.statusOptionsMap.delete(id);
   }
 }
 

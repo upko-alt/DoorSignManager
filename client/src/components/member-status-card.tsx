@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { StatusBadge } from "./status-badge";
 import { StatusHistoryDialog } from "./status-history-dialog";
 import { Check, Clock, XCircle, BellOff, RotateCw, Loader2, History } from "lucide-react";
-import type { Member } from "@shared/schema";
+import type { Member, StatusOption } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 
@@ -14,6 +14,7 @@ interface MemberStatusCardProps {
   onUpdateStatus: (memberId: string, status: string, customText?: string) => void;
   isUpdating?: boolean;
   readOnly?: boolean;
+  statusOptions: StatusOption[];
 }
 
 const STATUS_ICONS = {
@@ -32,7 +33,7 @@ const STATUS_COLORS = {
   "Be Right Back": "hsl(var(--status-brb))",
 } as const;
 
-export function MemberStatusCard({ member, onUpdateStatus, isUpdating, readOnly = false }: MemberStatusCardProps) {
+export function MemberStatusCard({ member, onUpdateStatus, isUpdating, readOnly = false, statusOptions }: MemberStatusCardProps) {
   const [customText, setCustomText] = useState(member.customStatusText || "");
   const [selectedStatus, setSelectedStatus] = useState<string>(member.currentStatus);
   const [showHistory, setShowHistory] = useState(false);
@@ -57,13 +58,29 @@ export function MemberStatusCard({ member, onUpdateStatus, isUpdating, readOnly 
       .slice(0, 2);
   };
 
-  const predefinedStatuses = [
-    "Available",
-    "In Meeting",
-    "Out",
-    "Do Not Disturb",
-    "Be Right Back",
-  ] as const;
+  const getStatusColor = (color: string) => {
+    const colorMap: Record<string, string> = {
+      green: "hsl(var(--status-available))",
+      yellow: "hsl(var(--status-meeting))",
+      red: "hsl(var(--status-out))",
+      blue: "hsl(var(--status-brb))",
+      purple: "hsl(220 70% 50%)",
+      orange: "hsl(25 95% 53%)",
+      gray: "hsl(var(--muted))",
+    };
+    return colorMap[color] || "hsl(var(--primary))";
+  };
+
+  const getStatusIcon = (name: string) => {
+    const iconMap: Record<string, any> = {
+      "Available": Check,
+      "In Meeting": Clock,
+      "Out": XCircle,
+      "Do Not Disturb": BellOff,
+      "Be Right Back": RotateCw,
+    };
+    return iconMap[name] || Check;
+  };
 
   return (
     <Card className="hover-elevate transition-shadow duration-200" data-testid={`card-member-${member.id}`}>
@@ -86,7 +103,7 @@ export function MemberStatusCard({ member, onUpdateStatus, isUpdating, readOnly 
       
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <StatusBadge status={member.currentStatus} />
+          <StatusBadge status={member.currentStatus} statusOptions={statusOptions} />
           <div className="flex items-center gap-1.5">
             <Button
               variant="ghost"
@@ -113,31 +130,31 @@ export function MemberStatusCard({ member, onUpdateStatus, isUpdating, readOnly 
         {!readOnly && (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
-              {predefinedStatuses.map((status) => {
-                const Icon = STATUS_ICONS[status];
-                const isActive = member.currentStatus === status;
+              {statusOptions.map((option) => {
+                const Icon = getStatusIcon(option.name);
+                const isActive = member.currentStatus === option.name;
                 
                 return (
                   <Button
-                    key={status}
+                    key={option.id}
                     variant={isActive ? "default" : "outline"}
                     size="sm"
-                    onClick={() => handleStatusClick(status)}
+                    onClick={() => handleStatusClick(option.name)}
                     disabled={isUpdating}
                     className="justify-start gap-2"
-                    data-testid={`button-status-${status.toLowerCase().replace(/\s+/g, "-")}-${member.id}`}
+                    data-testid={`button-status-${option.name.toLowerCase().replace(/\s+/g, "-")}-${member.id}`}
                     style={
                       isActive
                         ? {
-                            backgroundColor: STATUS_COLORS[status],
-                            borderColor: STATUS_COLORS[status],
+                            backgroundColor: getStatusColor(option.color),
+                            borderColor: getStatusColor(option.color),
                             color: "white",
                           }
                         : undefined
                     }
                   >
                     <Icon className="h-4 w-4" />
-                    <span className="text-xs">{status}</span>
+                    <span className="text-xs">{option.name}</span>
                   </Button>
                 );
               })}
@@ -175,7 +192,8 @@ export function MemberStatusCard({ member, onUpdateStatus, isUpdating, readOnly 
       <StatusHistoryDialog 
         member={member} 
         open={showHistory} 
-        onOpenChange={setShowHistory} 
+        onOpenChange={setShowHistory}
+        statusOptions={statusOptions}
       />
     </Card>
   );
