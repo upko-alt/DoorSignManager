@@ -69,11 +69,40 @@ A real-time door sign management system that syncs availability status to physic
 
 ## Production Deployment
 
-### Option 1: DigitalOcean Droplet (Recommended)
+### Option 1: Docker Compose (Recommended - Easiest!)
 
-Complete step-by-step guide: **[DEPLOYMENT.md](./DEPLOYMENT.md)**
+**Complete Docker guide:** **[DOCKER-DEPLOY.md](./DOCKER-DEPLOY.md)**
 
-**Quick overview:**
+The easiest way to deploy! Everything in one command:
+
+```bash
+# After uploading code to your server:
+cp .env.docker .env
+# Edit .env with your credentials
+docker compose up -d
+```
+
+**What you get:**
+- ✅ One-command deployment
+- ✅ PostgreSQL database included
+- ✅ Nginx reverse proxy included
+- ✅ Automatic migrations
+- ✅ Easy updates and rollbacks
+- ✅ Portable across any server
+
+**Quick start:**
+1. Create DigitalOcean Droplet (Ubuntu 22.04, 2GB RAM)
+2. Run: `./deploy/docker-quick-start.sh` (installs Docker)
+3. Upload your code
+4. Configure `.env`
+5. Run: `docker compose up -d`
+
+### Option 2: Traditional Server Deployment
+
+**Complete guide:** **[DEPLOYMENT.md](./DEPLOYMENT.md)**
+
+Manual setup with PM2 and Nginx:
+
 1. Create Ubuntu 22.04 Droplet (2GB RAM minimum)
 2. Run automated setup script
 3. Configure PostgreSQL database
@@ -84,11 +113,11 @@ Complete step-by-step guide: **[DEPLOYMENT.md](./DEPLOYMENT.md)**
 
 **Quick start for experienced users:** [deploy/quick-start.md](./deploy/quick-start.md)
 
-### Option 2: Replit Deployment
+### Option 3: Replit Deployment
 
 Simply click "Publish" in Replit - automatic deployment with built-in SSL and domain.
 
-### Option 3: Other Platforms
+### Option 4: Other Platforms
 
 Works on any Node.js hosting:
 - Railway
