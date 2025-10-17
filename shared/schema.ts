@@ -14,7 +14,7 @@ export const sessions = pgTable(
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
-// User table for username/password authentication
+// User table - combines authentication and door sign profile
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   username: varchar("username").notNull().unique(),
@@ -23,8 +23,12 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   role: varchar("role").notNull().default("regular"), // admin or regular
-  memberId: varchar("member_id").references(() => members.id), // Link to member profile
-  epaperId: varchar("epaper_id"), // Specific ID for e-paper system (e.g., "user1", "user2")
+  epaperId: varchar("epaper_id").notNull(), // Specific ID for e-paper system (e.g., "user1", "user2")
+  // Door sign status fields
+  avatarUrl: text("avatar_url"),
+  currentStatus: text("current_status").notNull().default("Available"),
+  customStatusText: text("custom_status_text"),
+  lastUpdated: timestamp("last_updated").notNull().defaultNow(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -33,32 +37,17 @@ export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  lastUpdated: true,
   passwordHash: true,
+  currentStatus: true,
+  customStatusText: true,
 }).extend({
   password: z.string().min(6, "Password must be at least 6 characters"),
+  epaperId: z.string().min(1, "E-paper ID is required"),
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
-
-// Department members with their door sign information
-export const members = pgTable("members", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  email: text("email"),
-  avatarUrl: text("avatar_url"),
-  currentStatus: text("current_status").notNull().default("Available"),
-  customStatusText: text("custom_status_text"),
-  lastUpdated: timestamp("last_updated").notNull().defaultNow(),
-});
-
-export const insertMemberSchema = createInsertSchema(members).omit({
-  id: true,
-  lastUpdated: true,
-});
-
-export type InsertMember = z.infer<typeof insertMemberSchema>;
-export type Member = typeof members.$inferSelect;
 
 // Status options table for configurable predefined statuses
 export const statusOptions = pgTable("status_options", {
@@ -98,7 +87,7 @@ export type PredefinedStatus = typeof PREDEFINED_STATUSES[number];
 
 // Status update schema
 export const updateStatusSchema = z.object({
-  memberId: z.string(),
+  userId: z.string(),
   status: z.string().min(1).max(50),
   customText: z.string().max(50).optional(),
 });
@@ -108,11 +97,11 @@ export type UpdateStatus = z.infer<typeof updateStatusSchema>;
 // Status history table to track all status changes
 export const statusHistory = pgTable("status_history", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  memberId: varchar("member_id").notNull().references(() => members.id, { onDelete: "cascade" }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   status: text("status").notNull(),
   customStatusText: text("custom_status_text"),
   changedAt: timestamp("changed_at").notNull().defaultNow(),
-  changedBy: varchar("changed_by"), // Will be used for user tracking later
+  changedBy: varchar("changed_by"), // User who made the change
 });
 
 export const insertStatusHistorySchema = createInsertSchema(statusHistory).omit({

@@ -32,20 +32,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Plus, Pencil, Trash2, ArrowLeft } from "lucide-react";
 import { useLocation } from "wouter";
-import type { Member } from "@shared/schema";
-
-interface User {
-  id: string;
-  username: string;
-  email: string | null;
-  firstName: string | null;
-  lastName: string | null;
-  role: string;
-  memberId: string | null;
-  epaperId: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
+import type { User } from "@shared/schema";
 
 export default function AdminUsers() {
   const [, setLocation] = useLocation();
@@ -57,7 +44,6 @@ export default function AdminUsers() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("regular");
-  const [memberId, setMemberId] = useState("");
   const [epaperId, setEpaperId] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -65,10 +51,6 @@ export default function AdminUsers() {
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
-  });
-
-  const { data: members = [] } = useQuery<Member[]>({
-    queryKey: ["/api/members"],
   });
 
   const createMutation = useMutation({
@@ -133,7 +115,6 @@ export default function AdminUsers() {
     setUsername("");
     setPassword("");
     setRole("regular");
-    setMemberId("");
     setEpaperId("");
     setFirstName("");
     setLastName("");
@@ -144,8 +125,7 @@ export default function AdminUsers() {
     setEditingUser(user);
     setUsername(user.username);
     setRole(user.role);
-    setMemberId(user.memberId || "none");
-    setEpaperId(user.epaperId || "");
+    setEpaperId(user.epaperId);
     setFirstName(user.firstName || "");
     setLastName(user.lastName || "");
     setEmail(user.email || "");
@@ -157,8 +137,7 @@ export default function AdminUsers() {
     
     const data: any = {
       role,
-      memberId: memberId && memberId !== "none" ? memberId : null,
-      epaperId: epaperId || null,
+      epaperId,
       firstName: firstName || null,
       lastName: lastName || null,
       email: email || null,
@@ -174,12 +153,6 @@ export default function AdminUsers() {
       }
       createMutation.mutate({ username, password, ...data });
     }
-  };
-
-  const getMemberName = (memberId: string | null) => {
-    if (!memberId) return "-";
-    const member = members.find(m => m.id === memberId);
-    return member?.name || "-";
   };
 
   return (
@@ -203,7 +176,7 @@ export default function AdminUsers() {
       <main className="container px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-6">
           <p className="text-muted-foreground">
-            Manage users and assign them to member profiles
+            Manage user accounts and permissions
           </p>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
@@ -258,37 +231,6 @@ export default function AdminUsers() {
                     </Select>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="epaperId">E-Paper ID</Label>
-                    <Input
-                      id="epaperId"
-                      value={epaperId}
-                      onChange={(e) => setEpaperId(e.target.value)}
-                      placeholder="e.g., user1, user2"
-                      data-testid="input-epaper-id"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      ID used to match with external e-paper system
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="member">Assign to Member</Label>
-                    <Select value={memberId} onValueChange={setMemberId}>
-                      <SelectTrigger data-testid="select-member">
-                        <SelectValue placeholder="Select member (optional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {members.map((member) => (
-                          <SelectItem key={member.id} value={member.id}>
-                            {member.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   <div className="grid grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="firstName">First Name</Label>
@@ -319,6 +261,21 @@ export default function AdminUsers() {
                       onChange={(e) => setEmail(e.target.value)}
                       data-testid="input-email"
                     />
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="epaperId">E-Paper ID *</Label>
+                    <Input
+                      id="epaperId"
+                      value={epaperId}
+                      onChange={(e) => setEpaperId(e.target.value)}
+                      placeholder="e.g., user1, user2"
+                      required
+                      data-testid="input-epaper-id"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      ID used to match with external e-paper system
+                    </p>
                   </div>
                 </div>
 
@@ -383,34 +340,6 @@ export default function AdminUsers() {
                   </Select>
                 </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-epaperId">E-Paper ID</Label>
-                  <Input
-                    id="edit-epaperId"
-                    value={epaperId}
-                    onChange={(e) => setEpaperId(e.target.value)}
-                    placeholder="e.g., user1, user2"
-                    data-testid="input-edit-epaper-id"
-                  />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="edit-member">Assign to Member</Label>
-                  <Select value={memberId} onValueChange={setMemberId}>
-                    <SelectTrigger data-testid="select-edit-member">
-                      <SelectValue placeholder="Select member (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {members.map((member) => (
-                        <SelectItem key={member.id} value={member.id}>
-                          {member.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 <div className="grid grid-cols-2 gap-4">
                   <div className="grid gap-2">
                     <Label htmlFor="edit-firstName">First Name</Label>
@@ -442,6 +371,21 @@ export default function AdminUsers() {
                     data-testid="input-edit-email"
                   />
                 </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-epaperId">E-Paper ID *</Label>
+                  <Input
+                    id="edit-epaperId"
+                    value={epaperId}
+                    onChange={(e) => setEpaperId(e.target.value)}
+                    placeholder="e.g., user1, user2"
+                    required
+                    data-testid="input-edit-epaper-id"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    ID used to match with external e-paper system
+                  </p>
+                </div>
               </div>
 
               <DialogFooter>
@@ -471,9 +415,9 @@ export default function AdminUsers() {
               <TableRow>
                 <TableHead>Username</TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>E-Paper ID</TableHead>
-                <TableHead>Assigned Member</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -488,16 +432,16 @@ export default function AdminUsers() {
                       ? `${user.firstName} ${user.lastName}`
                       : "-"}
                   </TableCell>
+                  <TableCell data-testid={`text-email-${user.id}`}>
+                    {user.email || "-"}
+                  </TableCell>
                   <TableCell>
                     <Badge variant={user.role === "admin" ? "default" : "secondary"} data-testid={`badge-role-${user.id}`}>
                       {user.role}
                     </Badge>
                   </TableCell>
                   <TableCell data-testid={`text-epaper-id-${user.id}`}>
-                    {user.epaperId || "-"}
-                  </TableCell>
-                  <TableCell data-testid={`text-member-${user.id}`}>
-                    {getMemberName(user.memberId)}
+                    {user.epaperId}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">

@@ -1,4 +1,4 @@
-import { type Member, type InsertMember, type StatusHistory, type InsertStatusHistory, type User, type SyncStatus, type InsertSyncStatus, type StatusOption, type InsertStatusOption, members, statusHistory, users, syncStatus, statusOptions } from "@shared/schema";
+import { type StatusHistory, type InsertStatusHistory, type User, type SyncStatus, type InsertSyncStatus, type StatusOption, type InsertStatusOption, statusHistory, users, syncStatus, statusOptions } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg from "pg";
@@ -8,19 +8,14 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(username: string, passwordHash: string, role?: string, memberId?: string, epaperId?: string): Promise<User>;
+  createUser(username: string, passwordHash: string, role?: string, epaperId?: string, email?: string, firstName?: string, lastName?: string): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
   getAllUsers(): Promise<User[]>;
-  
-  // Member operations
-  getMembers(): Promise<Member[]>;
-  getMember(id: string): Promise<Member | undefined>;
-  createMember(member: InsertMember): Promise<Member>;
-  updateMemberStatus(id: string, status: string, customText?: string): Promise<Member | undefined>;
+  updateUserStatus(id: string, status: string, customText?: string): Promise<User | undefined>;
   
   // Status history operations
-  getStatusHistory(memberId: string): Promise<StatusHistory[]>;
+  getStatusHistory(userId: string): Promise<StatusHistory[]>;
   createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory>;
   
   // Sync status operations
@@ -57,7 +52,7 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async createUser(username: string, passwordHash: string, role: string = "regular", memberId?: string, epaperId?: string): Promise<User> {
+  async createUser(username: string, passwordHash: string, role: string = "regular", epaperId?: string, email?: string, firstName?: string, lastName?: string): Promise<User> {
     // Check if this is the first user (make them admin)
     const allUsers = await this.db.select().from(users);
     const isFirstUser = allUsers.length === 0;
@@ -68,11 +63,10 @@ export class DbStorage implements IStorage {
         username,
         passwordHash,
         role: isFirstUser ? "admin" : role,
-        memberId: memberId || null,
-        epaperId: epaperId || null,
-        email: null,
-        firstName: null,
-        lastName: null,
+        epaperId: epaperId || `user_${username}`,
+        email: email || null,
+        firstName: firstName || null,
+        lastName: lastName || null,
       })
       .returning();
     return user;
@@ -98,43 +92,29 @@ export class DbStorage implements IStorage {
     return await this.db.select().from(users);
   }
 
-  async getMembers(): Promise<Member[]> {
-    return await this.db.select().from(members);
-  }
-
-  async getMember(id: string): Promise<Member | undefined> {
-    const result = await this.db.select().from(members).where(eq(members.id, id));
-    return result[0];
-  }
-
-  async createMember(insertMember: InsertMember): Promise<Member> {
-    const result = await this.db.insert(members).values(insertMember).returning();
-    return result[0];
-  }
-
-  async updateMemberStatus(
+  async updateUserStatus(
     id: string,
     status: string,
     customText?: string
-  ): Promise<Member | undefined> {
+  ): Promise<User | undefined> {
     const result = await this.db
-      .update(members)
+      .update(users)
       .set({
         currentStatus: status,
         customStatusText: customText || null,
         lastUpdated: new Date(),
       })
-      .where(eq(members.id, id))
+      .where(eq(users.id, id))
       .returning();
     
     return result[0];
   }
 
-  async getStatusHistory(memberId: string): Promise<StatusHistory[]> {
+  async getStatusHistory(userId: string): Promise<StatusHistory[]> {
     return await this.db
       .select()
       .from(statusHistory)
-      .where(eq(statusHistory.memberId, memberId))
+      .where(eq(statusHistory.userId, userId))
       .orderBy(desc(statusHistory.changedAt));
   }
 
@@ -196,77 +176,14 @@ export class DbStorage implements IStorage {
 }
 
 export class MemStorage implements IStorage {
-  private members: Map<string, Member>;
   private history: Map<string, StatusHistory[]>;
   private usersMap: Map<string, User>;
   private statusOptionsMap: Map<string, StatusOption>;
 
   constructor() {
-    this.members = new Map();
     this.history = new Map();
     this.usersMap = new Map();
     this.statusOptionsMap = new Map();
-    
-    // Add some initial sample members for demo
-    const sampleMembers: InsertMember[] = [
-      {
-        name: "Dr. Sarah Chen",
-        email: "sarah.chen@department.edu",
-        currentStatus: "Available",
-        customStatusText: null,
-        avatarUrl: null,
-      },
-      {
-        name: "Prof. Michael Rodriguez",
-        email: "m.rodriguez@department.edu",
-        currentStatus: "In Meeting",
-        customStatusText: "Department meeting until 3 PM",
-        avatarUrl: null,
-      },
-      {
-        name: "Dr. Emily Watson",
-        email: "e.watson@department.edu",
-        currentStatus: "Out",
-        customStatusText: "Back tomorrow",
-        avatarUrl: null,
-      },
-      {
-        name: "Prof. James Liu",
-        email: "james.liu@department.edu",
-        currentStatus: "Available",
-        customStatusText: null,
-        avatarUrl: null,
-      },
-      {
-        name: "Dr. Anna Kowalski",
-        email: "a.kowalski@department.edu",
-        currentStatus: "Do Not Disturb",
-        customStatusText: "Research session",
-        avatarUrl: null,
-      },
-      {
-        name: "Prof. David Kumar",
-        email: "d.kumar@department.edu",
-        currentStatus: "Be Right Back",
-        customStatusText: null,
-        avatarUrl: null,
-      },
-    ];
-
-    sampleMembers.forEach((memberData) => {
-      const id = randomUUID();
-      const member: Member = {
-        id,
-        name: memberData.name,
-        email: memberData.email ?? null,
-        avatarUrl: memberData.avatarUrl ?? null,
-        currentStatus: memberData.currentStatus ?? "Available",
-        customStatusText: memberData.customStatusText ?? null,
-        lastUpdated: new Date(),
-      };
-      this.members.set(id, member);
-      this.history.set(id, []);
-    });
   }
 
   // User operations
@@ -278,7 +195,7 @@ export class MemStorage implements IStorage {
     return Array.from(this.usersMap.values()).find(u => u.username === username);
   }
 
-  async createUser(username: string, passwordHash: string, role: string = "regular", memberId?: string, epaperId?: string): Promise<User> {
+  async createUser(username: string, passwordHash: string, role: string = "regular", epaperId?: string, email?: string, firstName?: string, lastName?: string): Promise<User> {
     const id = randomUUID();
     const isFirstUser = this.usersMap.size === 0;
     
@@ -286,12 +203,15 @@ export class MemStorage implements IStorage {
       id,
       username,
       passwordHash,
-      email: null,
-      firstName: null,
-      lastName: null,
+      email: email || null,
+      firstName: firstName || null,
+      lastName: lastName || null,
       role: isFirstUser ? "admin" : role,
-      memberId: memberId || null,
-      epaperId: epaperId || null,
+      epaperId: epaperId || `user_${username}`,
+      avatarUrl: null,
+      currentStatus: "Available",
+      customStatusText: null,
+      lastUpdated: new Date(),
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -320,69 +240,45 @@ export class MemStorage implements IStorage {
     return Array.from(this.usersMap.values());
   }
 
-  async getMembers(): Promise<Member[]> {
-    return Array.from(this.members.values());
-  }
-
-  async getMember(id: string): Promise<Member | undefined> {
-    return this.members.get(id);
-  }
-
-  async createMember(insertMember: InsertMember): Promise<Member> {
-    const id = randomUUID();
-    const member: Member = {
-      id,
-      name: insertMember.name,
-      email: insertMember.email ?? null,
-      avatarUrl: insertMember.avatarUrl ?? null,
-      currentStatus: insertMember.currentStatus ?? "Available",
-      customStatusText: insertMember.customStatusText ?? null,
-      lastUpdated: new Date(),
-    };
-    this.members.set(id, member);
-    this.history.set(id, []);
-    return member;
-  }
-
-  async updateMemberStatus(
+  async updateUserStatus(
     id: string,
     status: string,
     customText?: string
-  ): Promise<Member | undefined> {
-    const member = this.members.get(id);
-    if (!member) {
+  ): Promise<User | undefined> {
+    const user = this.usersMap.get(id);
+    if (!user) {
       return undefined;
     }
 
-    const updatedMember: Member = {
-      ...member,
+    const updatedUser: User = {
+      ...user,
       currentStatus: status,
       customStatusText: customText || null,
       lastUpdated: new Date(),
     };
 
-    this.members.set(id, updatedMember);
-    return updatedMember;
+    this.usersMap.set(id, updatedUser);
+    return updatedUser;
   }
 
-  async getStatusHistory(memberId: string): Promise<StatusHistory[]> {
-    return this.history.get(memberId) || [];
+  async getStatusHistory(userId: string): Promise<StatusHistory[]> {
+    return this.history.get(userId) || [];
   }
 
   async createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory> {
     const id = randomUUID();
     const record: StatusHistory = {
       id,
-      memberId: history.memberId,
+      userId: history.userId,
       status: history.status,
       customStatusText: history.customStatusText ?? null,
       changedBy: history.changedBy ?? null,
       changedAt: new Date(),
     };
     
-    const memberHistory = this.history.get(history.memberId) || [];
-    memberHistory.unshift(record);
-    this.history.set(history.memberId, memberHistory);
+    const userHistory = this.history.get(history.userId) || [];
+    userHistory.unshift(record);
+    this.history.set(history.userId, userHistory);
     
     return record;
   }

@@ -7,7 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import type { Member, UpdateStatus, StatusOption } from "@shared/schema";
+import type { User, UpdateStatus, StatusOption, SyncStatus } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
 import { AlertCircle, Shield } from "lucide-react";
@@ -17,8 +17,8 @@ export default function Dashboard() {
   const { isAdmin } = useAuth();
   const [updatingMembers, setUpdatingMembers] = useState<Set<string>>(new Set());
 
-  // Fetch members data
-  const { data: members = [], isLoading, error } = useQuery<Member[]>({
+  // Fetch members data (now returns users with status fields)
+  const { data: members = [], isLoading, error } = useQuery<User[]>({
     queryKey: ["/api/members"],
     refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
@@ -29,7 +29,7 @@ export default function Dashboard() {
   });
 
   // Fetch sync status
-  const { data: syncStatus } = useQuery({
+  const { data: syncStatus } = useQuery<SyncStatus>({
     queryKey: ["/api/sync/status"],
     refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
@@ -40,15 +40,15 @@ export default function Dashboard() {
       return apiRequest("POST", "/api/members/status", update);
     },
     onMutate: async (update) => {
-      setUpdatingMembers((prev) => new Set(prev).add(update.memberId));
+      setUpdatingMembers((prev) => new Set(prev).add(update.userId));
       
       // Optimistic update
       await queryClient.cancelQueries({ queryKey: ["/api/members"] });
-      const previousMembers = queryClient.getQueryData<Member[]>(["/api/members"]);
+      const previousMembers = queryClient.getQueryData<User[]>(["/api/members"]);
       
-      queryClient.setQueryData<Member[]>(["/api/members"], (old) =>
+      queryClient.setQueryData<User[]>(["/api/members"], (old) =>
         old?.map((member) =>
-          member.id === update.memberId
+          member.id === update.userId
             ? {
                 ...member,
                 currentStatus: update.status,
@@ -95,19 +95,19 @@ export default function Dashboard() {
     onSettled: (data, error, update) => {
       setUpdatingMembers((prev) => {
         const next = new Set(prev);
-        next.delete(update.memberId);
+        next.delete(update.userId);
         return next;
       });
       
       // Invalidate member list and member's status history
       queryClient.invalidateQueries({ queryKey: ["/api/members"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/members", update.memberId, "history"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/members", update.userId, "history"] });
     },
   });
 
-  const handleUpdateStatus = (memberId: string, status: string, customText?: string) => {
+  const handleUpdateStatus = (userId: string, status: string, customText?: string) => {
     updateStatusMutation.mutate({
-      memberId,
+      userId,
       status,
       customText,
     });
@@ -158,7 +158,7 @@ export default function Dashboard() {
           availableCount={0}
           lastSync={syncStatus?.syncedAt ? new Date(syncStatus.syncedAt) : null}
           isSyncing={syncMutation.isPending}
-          syncError={syncStatus?.success === "false" ? syncStatus.errorMessage : undefined}
+          syncError={syncStatus?.success === "false" ? (syncStatus.errorMessage || undefined) : undefined}
           onRefresh={handleRefresh}
         />
         <div className="container px-4 sm:px-6 lg:px-8 py-8">
@@ -185,7 +185,7 @@ export default function Dashboard() {
         availableCount={availableCount}
         lastSync={syncStatus?.syncedAt ? new Date(syncStatus.syncedAt) : null}
         isSyncing={syncMutation.isPending}
-        syncError={syncStatus?.success === "false" ? syncStatus.errorMessage : undefined}
+        syncError={syncStatus?.success === "false" ? (syncStatus.errorMessage || undefined) : undefined}
         onRefresh={handleRefresh}
       />
       

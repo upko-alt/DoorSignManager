@@ -5,13 +5,13 @@ import { Input } from "@/components/ui/input";
 import { StatusBadge } from "./status-badge";
 import { StatusHistoryDialog } from "./status-history-dialog";
 import { Check, Clock, XCircle, BellOff, RotateCw, Loader2, History } from "lucide-react";
-import type { Member, StatusOption } from "@shared/schema";
+import type { User, StatusOption } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 
 interface MemberStatusCardProps {
-  member: Member;
-  onUpdateStatus: (memberId: string, status: string, customText?: string) => void;
+  member: User;
+  onUpdateStatus: (userId: string, status: string, customText?: string) => void;
   isUpdating?: boolean;
   readOnly?: boolean;
   statusOptions: StatusOption[];
@@ -49,13 +49,18 @@ export function MemberStatusCard({ member, onUpdateStatus, isUpdating, readOnly 
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const getInitials = (firstName: string | null, lastName: string | null) => {
+    const parts = [];
+    if (firstName) parts.push(firstName[0]);
+    if (lastName) parts.push(lastName[0]);
+    return parts.join("").toUpperCase() || "?";
+  };
+
+  const getFullName = (firstName: string | null, lastName: string | null) => {
+    const parts = [];
+    if (firstName) parts.push(firstName);
+    if (lastName) parts.push(lastName);
+    return parts.join(" ") || "Unknown User";
   };
 
   const getStatusColor = (color: string) => {
@@ -86,14 +91,14 @@ export function MemberStatusCard({ member, onUpdateStatus, isUpdating, readOnly 
     <Card className="hover-elevate transition-shadow duration-200" data-testid={`card-member-${member.id}`}>
       <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-4">
         <Avatar className="h-12 w-12" data-testid={`avatar-${member.id}`}>
-          <AvatarImage src={member.avatarUrl || undefined} alt={member.name} />
+          <AvatarImage src={member.avatarUrl || undefined} alt={getFullName(member.firstName, member.lastName)} />
           <AvatarFallback className="bg-primary text-primary-foreground">
-            {getInitials(member.name)}
+            {getInitials(member.firstName, member.lastName)}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-medium truncate" data-testid={`text-member-name-${member.id}`}>
-            {member.name}
+            {getFullName(member.firstName, member.lastName)}
           </h3>
           {member.email && (
             <p className="text-xs text-muted-foreground truncate" data-testid={`text-member-email-${member.id}`}>{member.email}</p>

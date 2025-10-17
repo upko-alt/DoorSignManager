@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { updateStatusSchema, insertStatusOptionSchema } from "@shared/schema";
+import { updateStatusSchema, insertStatusOptionSchema, type User } from "@shared/schema";
 import { setupAuth, isAuthenticated, isAdmin } from "./auth";
 import { z } from "zod";
 import bcrypt from "bcrypt";
@@ -103,68 +103,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(userWithoutPassword);
   });
 
-  // Get all members (protected - requires login)
+  // Get all users with their status (protected - requires login)
   app.get("/api/members", isAuthenticated, async (req, res) => {
     try {
-      const members = await storage.getMembers();
-      res.json(members);
+      const users = await storage.getAllUsers();
+      const usersWithoutPasswords = users.map(({ passwordHash: _, ...user }) => user);
+      res.json(usersWithoutPasswords);
     } catch (error) {
-      console.error("Error fetching members:", error);
+      console.error("Error fetching users:", error);
       res.status(500).json({ 
-        error: "Failed to fetch members",
+        error: "Failed to fetch users",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
 
-  // Get single member (protected - requires login)
+  // Get single user with status (protected - requires login)
   app.get("/api/members/:id", isAuthenticated, async (req, res) => {
     try {
-      const member = await storage.getMember(req.params.id);
-      if (!member) {
-        return res.status(404).json({ error: "Member not found" });
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
       }
-      res.json(member);
+      const { passwordHash: _, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
     } catch (error) {
-      console.error("Error fetching member:", error);
+      console.error("Error fetching user:", error);
       res.status(500).json({ 
-        error: "Failed to fetch member",
+        error: "Failed to fetch user",
         message: error instanceof Error ? error.message : "Unknown error"
       });
     }
   });
 
-  // Update member status (protected - requires login, users can only update their own status)
+  // Update user status (protected - requires login, users can only update their own status)
   app.post("/api/members/status", isAuthenticated, async (req: any, res) => {
     try {
       const validated = updateStatusSchema.parse(req.body);
       const currentUser = req.user;
       
-      const member = await storage.getMember(validated.memberId);
-      if (!member) {
-        return res.status(404).json({ error: "Member not found" });
+      const user = await storage.getUser(validated.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
       }
 
       // Check authorization: admin can update any, regular user can only update their own
-      if (currentUser.role !== "admin" && currentUser.memberId !== validated.memberId) {
+      if (currentUser.role !== "admin" && currentUser.id !== validated.userId) {
         return res.status(403).json({ error: "You can only update your own status" });
       }
 
       // Update status in local storage
-      const updatedMember = await storage.updateMemberStatus(
-        validated.memberId,
+      const updatedUser = await storage.updateUserStatus(
+        validated.userId,
         validated.status,
         validated.customText
       );
 
-      if (!updatedMember) {
-        return res.status(404).json({ error: "Failed to update member" });
+      if (!updatedUser) {
+        return res.status(404).json({ error: "Failed to update user" });
       }
 
       // Log status change to history
       try {
         await storage.createStatusHistory({
-          memberId: validated.memberId,
+          userId: validated.userId,
           status: validated.status,
           customStatusText: validated.customText || null,
           changedBy: currentUser.username,
@@ -173,11 +175,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Failed to log status change to history:", historyError);
       }
 
-      // Send update to e-paper system
+      // Send update to e-paper system using epaperId
       try {
-        if (member.email) {
+        if (user.epaperId) {
           await epaperService.sendStatusUpdate(
-            member.email,
+            user.epaperId,
             validated.status,
             validated.customText
           );
@@ -186,7 +188,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("E-paper update failed, but local update succeeded:", epaperError);
       }
 
-      res.json(updatedMember);
+      const { passwordHash: _, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
@@ -195,7 +198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      console.error("Error updating member status:", error);
+      console.error("Error updating user status:", error);
       res.status(500).json({ 
         error: "Failed to update status",
         message: error instanceof Error ? error.message : "Unknown error"
@@ -203,12 +206,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get status history for a member (protected - requires login)
+  // Get status history for a user (protected - requires login)
   app.get("/api/members/:id/history", isAuthenticated, async (req, res) => {
     try {
-      const member = await storage.getMember(req.params.id);
-      if (!member) {
-        return res.status(404).json({ error: "Member not found" });
+      const user = await storage.getUser(req.params.id);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
       }
       
       const history = await storage.getStatusHistory(req.params.id);
@@ -237,10 +240,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/users", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { username, password, role, memberId, epaperId, firstName, lastName, email } = req.body;
+      const { username, password, role, epaperId, firstName, lastName, email } = req.body;
       
       if (!username || !password) {
         return res.status(400).json({ error: "Username and password are required" });
+      }
+
+      if (!epaperId) {
+        return res.status(400).json({ error: "E-paper ID is required" });
       }
 
       // Check if username already exists
@@ -252,17 +259,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Hash password
       const passwordHash = await bcrypt.hash(password, 10);
 
-      // Create user
-      const user = await storage.createUser(username, passwordHash, role || "regular", memberId, epaperId);
-      
-      // Update additional fields if provided
-      if (firstName || lastName || email) {
-        const updates: any = {};
-        if (firstName) updates.firstName = firstName;
-        if (lastName) updates.lastName = lastName;
-        if (email) updates.email = email;
-        await storage.updateUser(user.id, updates);
-      }
+      // Create user with all fields
+      const user = await storage.createUser(username, passwordHash, role || "regular", epaperId, email, firstName, lastName);
 
       const { passwordHash: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -275,11 +273,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/users/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { role, memberId, epaperId, firstName, lastName, email, password } = req.body;
+      const { role, epaperId, firstName, lastName, email, password } = req.body;
       
       const updates: Partial<User> = {};
       if (role) updates.role = role;
-      if (memberId !== undefined) updates.memberId = memberId;
       if (epaperId !== undefined) updates.epaperId = epaperId;
       if (firstName !== undefined) updates.firstName = firstName;
       if (lastName !== undefined) updates.lastName = lastName;
@@ -393,18 +390,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const statuses = await epaperService.fetchCurrentStatuses();
       
-      // Update member statuses from e-paper data
+      // Update user statuses from e-paper data
       let updatedCount = 0;
-      const members = await storage.getMembers();
+      const users = await storage.getAllUsers();
       
-      for (const member of members) {
-        if (!member.email) continue;
+      for (const user of users) {
+        if (!user.epaperId) continue;
         
-        const sanitizedEmail = member.email.replace(/[@.]/g, "_");
-        const statusKey = `${sanitizedEmail}_status`;
+        const sanitizedEpaperId = user.epaperId.replace(/[@.]/g, "_");
+        const statusKey = `${sanitizedEpaperId}_status`;
         
-        if (statuses[statusKey] && statuses[statusKey] !== member.currentStatus) {
-          await storage.updateMemberStatus(member.id, statuses[statusKey]);
+        if (statuses[statusKey] && statuses[statusKey] !== user.currentStatus) {
+          await storage.updateUserStatus(user.id, statuses[statusKey]);
           updatedCount++;
         }
       }

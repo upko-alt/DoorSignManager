@@ -1,13 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { type Member, type StatusHistory, type StatusOption } from "@shared/schema";
+import { type User, type StatusHistory, type StatusOption } from "@shared/schema";
 import { StatusBadge } from "./status-badge";
 import { format } from "date-fns";
 import { Clock } from "lucide-react";
 
 interface StatusHistoryDialogProps {
-  member: Member;
+  member: User;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   statusOptions: StatusOption[];
@@ -19,11 +19,18 @@ export function StatusHistoryDialog({ member, open, onOpenChange, statusOptions 
     enabled: open,
   });
 
+  const getFullName = (firstName: string | null, lastName: string | null) => {
+    const parts = [];
+    if (firstName) parts.push(firstName);
+    if (lastName) parts.push(lastName);
+    return parts.join(" ") || "Unknown User";
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]" data-testid="dialog-status-history">
         <DialogHeader>
-          <DialogTitle data-testid="text-history-title">Status History - {member.name}</DialogTitle>
+          <DialogTitle data-testid="text-history-title">Status History - {getFullName(member.firstName, member.lastName)}</DialogTitle>
           <DialogDescription data-testid="text-history-description">
             View all status changes for this member
           </DialogDescription>
