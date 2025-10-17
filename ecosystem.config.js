@@ -1,8 +1,8 @@
 module.exports = {
   apps: [{
     name: 'epaper-dashboard',
-    script: 'npm',
-    args: 'start',
+    script: 'dist/index.js',
+    interpreter: 'node',
     instances: 1,
     autorestart: true,
     watch: false,
