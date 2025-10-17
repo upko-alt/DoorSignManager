@@ -1,15 +1,177 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { updateStatusSchema } from "@shared/schema";
+import { z } from "zod";
+
+// E-paper API service
+class EpaperService {
+  private importUrl: string;
+  private exportUrl: string;
+  private importKey: string;
+  private exportKey: string;
+
+  constructor() {
+    this.importUrl = process.env.EPAPER_IMPORT_URL || "";
+    this.exportUrl = process.env.EPAPER_EXPORT_URL || "";
+    this.importKey = process.env.EPAPER_IMPORT_KEY || "";
+    this.exportKey = process.env.EPAPER_EXPORT_KEY || "";
+  }
+
+  async sendStatusUpdate(memberEmail: string, status: string, customText?: string): Promise<void> {
+    if (!this.importUrl || !this.importKey) {
+      console.warn("E-paper import credentials not configured. Skipping external update.");
+      return;
+    }
+
+    try {
+      const sanitizedEmail = memberEmail.replace(/[@.]/g, "_");
+      const statusValue = customText || status;
+      
+      const url = `${this.importUrl}/?import_key=${encodeURIComponent(this.importKey)}&${sanitizedEmail}_status=${encodeURIComponent(statusValue)}`;
+      
+      const response = await fetch(url, { method: 'GET' });
+      
+      if (!response.ok) {
+        console.error(`Failed to update e-paper for ${memberEmail}: ${response.status}`);
+      } else {
+        console.log(`Successfully updated e-paper for ${memberEmail}`);
+      }
+    } catch (error) {
+      console.error("Error updating e-paper:", error);
+      throw error;
+    }
+  }
+
+  async fetchCurrentStatuses(): Promise<Record<string, any>> {
+    if (!this.exportUrl || !this.exportKey) {
+      console.warn("E-paper export credentials not configured. Skipping external fetch.");
+      return {};
+    }
+
+    try {
+      const url = `${this.exportUrl}/?export_key=${encodeURIComponent(this.exportKey)}&my_values=json`;
+      
+      const response = await fetch(url, { method: 'GET' });
+      
+      if (!response.ok) {
+        console.error(`Failed to fetch e-paper statuses: ${response.status}`);
+        return {};
+      }
+      
+      const data = await response.json();
+      console.log("Fetched e-paper statuses:", data);
+      return data;
+    } catch (error) {
+      console.error("Error fetching e-paper statuses:", error);
+      return {};
+    }
+  }
+}
+
+const epaperService = new EpaperService();
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // put application routes here
-  // prefix all routes with /api
+  // Get all members
+  app.get("/api/members", async (req, res) => {
+    try {
+      const members = await storage.getMembers();
+      res.json(members);
+    } catch (error) {
+      console.error("Error fetching members:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch members",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
 
-  // use storage to perform CRUD operations on the storage interface
-  // e.g. storage.insertUser(user) or storage.getUserByUsername(username)
+  // Get single member
+  app.get("/api/members/:id", async (req, res) => {
+    try {
+      const member = await storage.getMember(req.params.id);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      res.json(member);
+    } catch (error) {
+      console.error("Error fetching member:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch member",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Update member status
+  app.post("/api/members/status", async (req, res) => {
+    try {
+      const validated = updateStatusSchema.parse(req.body);
+      
+      const member = await storage.getMember(validated.memberId);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+
+      // Update status in local storage
+      const updatedMember = await storage.updateMemberStatus(
+        validated.memberId,
+        validated.status,
+        validated.customText
+      );
+
+      if (!updatedMember) {
+        return res.status(404).json({ error: "Failed to update member" });
+      }
+
+      // Send update to e-paper system
+      try {
+        if (member.email) {
+          await epaperService.sendStatusUpdate(
+            member.email,
+            validated.status,
+            validated.customText
+          );
+        }
+      } catch (epaperError) {
+        console.error("E-paper update failed, but local update succeeded:", epaperError);
+      }
+
+      res.json(updatedMember);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          error: "Invalid request data",
+          details: error.errors 
+        });
+      }
+      
+      console.error("Error updating member status:", error);
+      res.status(500).json({ 
+        error: "Failed to update status",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  // Sync statuses from e-paper system
+  app.post("/api/sync", async (req, res) => {
+    try {
+      const statuses = await epaperService.fetchCurrentStatuses();
+      res.json({ 
+        success: true, 
+        statuses,
+        syncedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error syncing from e-paper:", error);
+      res.status(500).json({ 
+        error: "Failed to sync statuses",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
 
   const httpServer = createServer(app);
-
   return httpServer;
 }

@@ -76,6 +76,13 @@
   --chart-4: 0 84% 60%;
   --chart-5: 262 83% 58%;
 
+  /* Status colors for door signs */
+  --status-available: 142 76% 45%;
+  --status-meeting: 38 92% 55%;
+  --status-out: 0 84% 60%;
+  --status-dnd: 262 83% 58%;
+  --status-brb: 210 100% 50%;
+
   --font-sans: Inter, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: Menlo, monospace;
@@ -194,10 +201,17 @@
   --chart-4: 0 84% 65%;
   --chart-5: 262 83% 68%;
 
+  /* Status colors for door signs - dark mode */
+  --status-available: 142 76% 55%;
+  --status-meeting: 38 92% 65%;
+  --status-out: 0 84% 65%;
+  --status-dnd: 262 83% 68%;
+  --status-brb: 210 100% 65%;
+
   --shadow-2xs: 0px 2px 0px 0px hsl(220 15% 8% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(220 15% 8% / 0.00);
   --shadow-sm: 0px 2px 0px 0px hsl(220 15% 8% / 0.00), 0px 1px 2px -1px hsl(220 15% 8% / 0.00);
-  --shadow: 0px 2px 0px 0px hsl(220 15% 8% / 0.00), 0px 1px 2px -1px hsl(220 15% 8% / 0.00);
+  --shadow: 0px 2px 0px 0px hsl(220 15% 8% / 0.00), 0px 2px 4px -1px hsl(220 15% 8% / 0.00);
   --shadow-md: 0px 2px 0px 0px hsl(220 15% 8% / 0.00), 0px 2px 4px -1px hsl(220 15% 8% / 0.00);
   --shadow-lg: 0px 2px 0px 0px hsl(220 15% 8% / 0.00), 0px 4px 6px -1px hsl(220 15% 8% / 0.00);
   --shadow-xl: 0px 2px 0px 0px hsl(220 15% 8% / 0.00), 0px 8px 10px -1px hsl(220 15% 8% / 0.00);
@@ -324,5 +338,19 @@
   .border.active-elevate-2:not(.no-active-interaction-elevate)::after,
   .border.hover-elevate:not(.no-hover-interaction-elevate)::after {
     inset: -1px;
+  }
+
+  /* Pulsing animation for recently updated statuses */
+  @keyframes pulse-dot {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  .animate-pulse-dot {
+    animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 }

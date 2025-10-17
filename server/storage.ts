@@ -1,37 +1,114 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { type Member, type InsertMember } from "@shared/schema";
 import { randomUUID } from "crypto";
 
-// modify the interface with any CRUD methods
-// you might need
-
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getMembers(): Promise<Member[]>;
+  getMember(id: string): Promise<Member | undefined>;
+  createMember(member: InsertMember): Promise<Member>;
+  updateMemberStatus(id: string, status: string, customText?: string): Promise<Member | undefined>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private members: Map<string, Member>;
 
   constructor() {
-    this.users = new Map();
+    this.members = new Map();
+    
+    // Add some initial sample members for demo
+    const sampleMembers: InsertMember[] = [
+      {
+        name: "Dr. Sarah Chen",
+        email: "sarah.chen@department.edu",
+        currentStatus: "Available",
+        customStatusText: null,
+        avatarUrl: null,
+      },
+      {
+        name: "Prof. Michael Rodriguez",
+        email: "m.rodriguez@department.edu",
+        currentStatus: "In Meeting",
+        customStatusText: "Department meeting until 3 PM",
+        avatarUrl: null,
+      },
+      {
+        name: "Dr. Emily Watson",
+        email: "e.watson@department.edu",
+        currentStatus: "Out",
+        customStatusText: "Back tomorrow",
+        avatarUrl: null,
+      },
+      {
+        name: "Prof. James Liu",
+        email: "james.liu@department.edu",
+        currentStatus: "Available",
+        customStatusText: null,
+        avatarUrl: null,
+      },
+      {
+        name: "Dr. Anna Kowalski",
+        email: "a.kowalski@department.edu",
+        currentStatus: "Do Not Disturb",
+        customStatusText: "Research session",
+        avatarUrl: null,
+      },
+      {
+        name: "Prof. David Kumar",
+        email: "d.kumar@department.edu",
+        currentStatus: "Be Right Back",
+        customStatusText: null,
+        avatarUrl: null,
+      },
+    ];
+
+    sampleMembers.forEach((memberData) => {
+      const id = randomUUID();
+      const member: Member = {
+        id,
+        ...memberData,
+        lastUpdated: new Date(),
+      };
+      this.members.set(id, member);
+    });
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getMembers(): Promise<Member[]> {
+    return Array.from(this.members.values());
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getMember(id: string): Promise<Member | undefined> {
+    return this.members.get(id);
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createMember(insertMember: InsertMember): Promise<Member> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    const member: Member = {
+      id,
+      ...insertMember,
+      lastUpdated: new Date(),
+    };
+    this.members.set(id, member);
+    return member;
+  }
+
+  async updateMemberStatus(
+    id: string,
+    status: string,
+    customText?: string
+  ): Promise<Member | undefined> {
+    const member = this.members.get(id);
+    if (!member) {
+      return undefined;
+    }
+
+    const updatedMember: Member = {
+      ...member,
+      currentStatus: status,
+      customStatusText: customText || null,
+      lastUpdated: new Date(),
+    };
+
+    this.members.set(id, updatedMember);
+    return updatedMember;
   }
 }
 
