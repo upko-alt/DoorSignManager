@@ -1,14 +1,21 @@
-import { type Member, type InsertMember, type StatusHistory, type InsertStatusHistory, members, statusHistory } from "@shared/schema";
+import { type Member, type InsertMember, type StatusHistory, type InsertStatusHistory, type User, type UpsertUser, members, statusHistory, users } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
+  // User operations (required for Replit Auth)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Member operations
   getMembers(): Promise<Member[]>;
   getMember(id: string): Promise<Member | undefined>;
   createMember(member: InsertMember): Promise<Member>;
   updateMemberStatus(id: string, status: string, customText?: string): Promise<Member | undefined>;
+  
+  // Status history operations
   getStatusHistory(memberId: string): Promise<StatusHistory[]>;
   createStatusHistory(history: InsertStatusHistory): Promise<StatusHistory>;
 }
@@ -20,6 +27,34 @@ export class DbStorage implements IStorage {
   constructor() {
     const sql = neon(process.env.DATABASE_URL!);
     this.db = drizzle(sql);
+  }
+
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await this.db.select().from(users).where(eq(users.id, id));
+    return result[0];
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    // Check if this is the first user (make them admin)
+    const allUsers = await this.db.select().from(users);
+    const isFirstUser = allUsers.length === 0;
+    
+    const [user] = await this.db
+      .insert(users)
+      .values({
+        ...userData,
+        role: isFirstUser ? "admin" : (userData.role || "regular"),
+      })
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
   }
 
   async getMembers(): Promise<Member[]> {
@@ -71,10 +106,12 @@ export class DbStorage implements IStorage {
 export class MemStorage implements IStorage {
   private members: Map<string, Member>;
   private history: Map<string, StatusHistory[]>;
+  private usersMap: Map<string, User>;
 
   constructor() {
     this.members = new Map();
     this.history = new Map();
+    this.usersMap = new Map();
     
     // Add some initial sample members for demo
     const sampleMembers: InsertMember[] = [
@@ -136,6 +173,27 @@ export class MemStorage implements IStorage {
       this.members.set(id, member);
       this.history.set(id, []);
     });
+  }
+
+  // User operations
+  async getUser(id: string): Promise<User | undefined> {
+    return this.usersMap.get(id);
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const existingUser = this.usersMap.get(userData.id!);
+    const user: User = {
+      id: userData.id!,
+      email: userData.email ?? null,
+      firstName: userData.firstName ?? null,
+      lastName: userData.lastName ?? null,
+      profileImageUrl: userData.profileImageUrl ?? null,
+      role: userData.role ?? existingUser?.role ?? "regular",
+      createdAt: existingUser?.createdAt ?? new Date(),
+      updatedAt: new Date(),
+    };
+    this.usersMap.set(user.id, user);
+    return user;
   }
 
   async getMembers(): Promise<Member[]> {

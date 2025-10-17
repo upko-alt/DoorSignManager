@@ -1,7 +1,18 @@
-import { RefreshCw, CheckCircle2, AlertCircle } from "lucide-react";
+import { RefreshCw, CheckCircle2, AlertCircle, LogOut, Shield } from "lucide-react";
 import { ThemeToggle } from "./theme-toggle";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
 
 interface DashboardHeaderProps {
   totalMembers: number;
@@ -20,6 +31,18 @@ export function DashboardHeader({
   syncError,
   onRefresh,
 }: DashboardHeaderProps) {
+  const { user, isAdmin } = useAuth();
+
+  const handleLogout = () => {
+    window.location.href = "/api/logout";
+  };
+
+  const getInitials = (firstName?: string | null, lastName?: string | null) => {
+    const first = firstName?.[0] || "";
+    const last = lastName?.[0] || "";
+    return (first + last).toUpperCase() || "U";
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -73,6 +96,48 @@ export function DashboardHeader({
           </Button>
           
           <ThemeToggle />
+
+          {user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-9 w-9 rounded-full" data-testid="button-user-menu">
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName || "User"} />
+                    <AvatarFallback>{getInitials(user.firstName, user.lastName)}</AvatarFallback>
+                  </Avatar>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none" data-testid="text-user-name">
+                      {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email}
+                    </p>
+                    {user.email && (
+                      <p className="text-xs leading-none text-muted-foreground" data-testid="text-user-email">
+                        {user.email}
+                      </p>
+                    )}
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    <span className="text-xs">Role:</span>
+                    <Badge variant={isAdmin ? "default" : "secondary"} className="text-xs" data-testid="badge-user-role">
+                      {isAdmin ? "Admin" : "Regular"}
+                    </Badge>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} data-testid="button-logout">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
       </div>
     </header>

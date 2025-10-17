@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { updateStatusSchema } from "@shared/schema";
+import { setupAuth, isAuthenticated, isAdmin } from "./replitAuth";
 import { z } from "zod";
 
 // E-paper API service
@@ -72,8 +73,23 @@ class EpaperService {
 const epaperService = new EpaperService();
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Get all members
-  app.get("/api/members", async (req, res) => {
+  // Setup authentication middleware
+  await setupAuth(app);
+
+  // Auth route - get current user
+  app.get("/api/auth/user", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Get all members (protected - requires login)
+  app.get("/api/members", isAuthenticated, async (req, res) => {
     try {
       const members = await storage.getMembers();
       res.json(members);
@@ -86,8 +102,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get single member
-  app.get("/api/members/:id", async (req, res) => {
+  // Get single member (protected - requires login)
+  app.get("/api/members/:id", isAuthenticated, async (req, res) => {
     try {
       const member = await storage.getMember(req.params.id);
       if (!member) {
@@ -103,8 +119,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Update member status
-  app.post("/api/members/status", async (req, res) => {
+  // Update member status (protected - requires admin role)
+  app.post("/api/members/status", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const validated = updateStatusSchema.parse(req.body);
       
@@ -166,8 +182,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get status history for a member
-  app.get("/api/members/:id/history", async (req, res) => {
+  // Get status history for a member (protected - requires login)
+  app.get("/api/members/:id/history", isAuthenticated, async (req, res) => {
     try {
       const member = await storage.getMember(req.params.id);
       if (!member) {
@@ -185,8 +201,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Sync statuses from e-paper system
-  app.post("/api/sync", async (req, res) => {
+  // Sync statuses from e-paper system (protected - requires admin role)
+  app.post("/api/sync", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const statuses = await epaperService.fetchCurrentStatuses();
       res.json({ 

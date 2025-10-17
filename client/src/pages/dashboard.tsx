@@ -3,14 +3,18 @@ import { DashboardHeader } from "@/components/dashboard-header";
 import { MemberStatusCard } from "@/components/member-status-card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { isUnauthorizedError } from "@/lib/authUtils";
 import type { Member, UpdateStatus } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Shield } from "lucide-react";
 
 export default function Dashboard() {
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
   const [updatingMembers, setUpdatingMembers] = useState<Set<string>>(new Set());
 
   // Fetch members data
@@ -56,6 +60,19 @@ export default function Dashboard() {
       // Rollback on error
       if (context?.previousMembers) {
         queryClient.setQueryData(["/api/members"], context.previousMembers);
+      }
+      
+      // Handle unauthorized errors
+      if (error instanceof Error && isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
       }
       
       toast({
@@ -129,6 +146,15 @@ export default function Dashboard() {
       />
       
       <main className="container px-4 sm:px-6 lg:px-8 py-8">
+        {!isAdmin && (
+          <Alert className="mb-6" data-testid="alert-readonly">
+            <Shield className="h-4 w-4" />
+            <AlertDescription>
+              You have read-only access. Only administrators can update member statuses.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
@@ -174,6 +200,7 @@ export default function Dashboard() {
                 member={member}
                 onUpdateStatus={handleUpdateStatus}
                 isUpdating={updatingMembers.has(member.id)}
+                readOnly={!isAdmin}
               />
             ))}
           </div>

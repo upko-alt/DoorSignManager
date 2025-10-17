@@ -13,6 +13,7 @@ interface MemberStatusCardProps {
   member: Member;
   onUpdateStatus: (memberId: string, status: string, customText?: string) => void;
   isUpdating?: boolean;
+  readOnly?: boolean;
 }
 
 const STATUS_ICONS = {
@@ -31,7 +32,7 @@ const STATUS_COLORS = {
   "Be Right Back": "hsl(var(--status-brb))",
 } as const;
 
-export function MemberStatusCard({ member, onUpdateStatus, isUpdating }: MemberStatusCardProps) {
+export function MemberStatusCard({ member, onUpdateStatus, isUpdating, readOnly = false }: MemberStatusCardProps) {
   const [customText, setCustomText] = useState(member.customStatusText || "");
   const [selectedStatus, setSelectedStatus] = useState<string>(member.currentStatus);
   const [showHistory, setShowHistory] = useState(false);
@@ -109,64 +110,66 @@ export function MemberStatusCard({ member, onUpdateStatus, isUpdating }: MemberS
           </p>
         )}
 
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-2">
-            {predefinedStatuses.map((status) => {
-              const Icon = STATUS_ICONS[status];
-              const isActive = member.currentStatus === status;
-              
-              return (
-                <Button
-                  key={status}
-                  variant={isActive ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleStatusClick(status)}
-                  disabled={isUpdating}
-                  className="justify-start gap-2"
-                  data-testid={`button-status-${status.toLowerCase().replace(/\s+/g, "-")}-${member.id}`}
-                  style={
-                    isActive
-                      ? {
-                          backgroundColor: STATUS_COLORS[status],
-                          borderColor: STATUS_COLORS[status],
-                          color: "white",
-                        }
-                      : undefined
-                  }
-                >
-                  <Icon className="h-4 w-4" />
-                  <span className="text-xs">{status}</span>
-                </Button>
-              );
-            })}
-          </div>
+        {!readOnly && (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              {predefinedStatuses.map((status) => {
+                const Icon = STATUS_ICONS[status];
+                const isActive = member.currentStatus === status;
+                
+                return (
+                  <Button
+                    key={status}
+                    variant={isActive ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => handleStatusClick(status)}
+                    disabled={isUpdating}
+                    className="justify-start gap-2"
+                    data-testid={`button-status-${status.toLowerCase().replace(/\s+/g, "-")}-${member.id}`}
+                    style={
+                      isActive
+                        ? {
+                            backgroundColor: STATUS_COLORS[status],
+                            borderColor: STATUS_COLORS[status],
+                            color: "white",
+                          }
+                        : undefined
+                    }
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span className="text-xs">{status}</span>
+                  </Button>
+                );
+              })}
+            </div>
 
-          <div className="flex gap-2">
-            <Input
-              placeholder="Custom status message..."
-              value={customText}
-              onChange={(e) => setCustomText(e.target.value.slice(0, 50))}
-              maxLength={50}
-              disabled={isUpdating}
-              data-testid={`input-custom-text-${member.id}`}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleCustomUpdate();
-                }
-              }}
-            />
-            <Button
-              onClick={handleCustomUpdate}
-              disabled={!customText.trim() || isUpdating}
-              data-testid={`button-update-custom-text-${member.id}`}
-            >
-              Update
-            </Button>
+            <div className="flex gap-2">
+              <Input
+                placeholder="Custom status message..."
+                value={customText}
+                onChange={(e) => setCustomText(e.target.value.slice(0, 50))}
+                maxLength={50}
+                disabled={isUpdating}
+                data-testid={`input-custom-text-${member.id}`}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleCustomUpdate();
+                  }
+                }}
+              />
+              <Button
+                onClick={handleCustomUpdate}
+                disabled={!customText.trim() || isUpdating}
+                data-testid={`button-update-custom-text-${member.id}`}
+              >
+                Update
+              </Button>
+            </div>
+            <div className="text-xs text-muted-foreground text-right" data-testid={`text-char-count-${member.id}`}>
+              {customText.length}/50
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground text-right" data-testid={`text-char-count-${member.id}`}>
-            {customText.length}/50
-          </div>
-        </div>
+        )}
       </CardContent>
       
       <StatusHistoryDialog 
