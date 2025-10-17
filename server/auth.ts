@@ -9,6 +9,9 @@ import ConnectPg from "connect-pg-simple";
 const PgSession = ConnectPg(session);
 
 export async function setupAuth(app: Express) {
+  // Trust proxy for correct protocol detection when behind nginx
+  app.set("trust proxy", 1);
+
   // Setup session store
   const sessionStore = new PgSession({
     conObject: {
@@ -28,7 +31,9 @@ export async function setupAuth(app: Express) {
       cookie: {
         maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        // Secure cookies in production, but allow override for direct HTTP access
+        secure: process.env.COOKIE_SECURE === "false" ? false : process.env.NODE_ENV === "production",
+        sameSite: "lax",
       },
     })
   );

@@ -37,6 +37,7 @@ services:
       PORT: 5000
       DATABASE_URL: postgresql://${POSTGRES_USER:-epaper_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-epaper_dashboard}
       SESSION_SECRET: ${SESSION_SECRET:?Please set SESSION_SECRET in .env}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}  # Secure cookies by default (HTTPS). Set to 'false' only for HTTP testing
       EPAPER_IMPORT_URL: ${EPAPER_IMPORT_URL:-}
       EPAPER_IMPORT_KEY: ${EPAPER_IMPORT_KEY:-}
       EPAPER_EXPORT_URL: ${EPAPER_EXPORT_URL:-}
