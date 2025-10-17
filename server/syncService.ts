@@ -14,27 +14,20 @@ export class SyncService {
 
   async fetchCurrentStatuses(): Promise<Record<string, any>> {
     if (!this.exportUrl || !this.exportKey) {
-      console.warn("E-paper export credentials not configured. Skipping external fetch.");
-      return {};
+      throw new Error("E-paper export credentials not configured");
     }
 
-    try {
-      const url = `${this.exportUrl}/?export_key=${encodeURIComponent(this.exportKey)}&my_values=json`;
-      
-      const response = await fetch(url, { method: 'GET' });
-      
-      if (!response.ok) {
-        console.error(`Failed to fetch e-paper statuses: ${response.status}`);
-        return {};
-      }
-      
-      const data = await response.json();
-      console.log("Fetched e-paper statuses:", data);
-      return data;
-    } catch (error) {
-      console.error("Error fetching e-paper statuses:", error);
-      return {};
+    const url = `${this.exportUrl}/?export_key=${encodeURIComponent(this.exportKey)}&my_values=json`;
+    
+    const response = await fetch(url, { method: 'GET' });
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch e-paper statuses: HTTP ${response.status}`);
     }
+    
+    const data = await response.json();
+    console.log("Fetched e-paper statuses:", data);
+    return data;
   }
 
   async performSync(): Promise<{ success: boolean; updatedCount: number; error?: string }> {

@@ -23,6 +23,12 @@ export default function Dashboard() {
     refetchInterval: 30000, // Auto-refresh every 30 seconds
   });
 
+  // Fetch sync status
+  const { data: syncStatus } = useQuery({
+    queryKey: ["/api/sync/status"],
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+  });
+
   // Update status mutation
   const updateStatusMutation = useMutation({
     mutationFn: async (update: UpdateStatus) => {
@@ -102,8 +108,39 @@ export default function Dashboard() {
     });
   };
 
+  // Manual sync mutation
+  const syncMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/sync", {});
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to sync");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/sync/status"] });
+      toast({
+        title: "Sync completed",
+        description: "Status data has been synced with e-paper system.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Sync failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleRefresh = () => {
-    queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+    if (isAdmin) {
+      syncMutation.mutate();
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["/api/members"] });
+    }
   };
 
   const availableCount = members.filter((m) => m.currentStatus === "Available").length;
@@ -114,8 +151,9 @@ export default function Dashboard() {
         <DashboardHeader
           totalMembers={0}
           availableCount={0}
-          lastSync={null}
-          isSyncing={false}
+          lastSync={syncStatus?.syncedAt ? new Date(syncStatus.syncedAt) : null}
+          isSyncing={syncMutation.isPending}
+          syncError={syncStatus?.success === "false" ? syncStatus.errorMessage : undefined}
           onRefresh={handleRefresh}
         />
         <div className="container px-4 sm:px-6 lg:px-8 py-8">
@@ -140,8 +178,9 @@ export default function Dashboard() {
       <DashboardHeader
         totalMembers={members.length}
         availableCount={availableCount}
-        lastSync={members.length > 0 ? new Date() : null}
-        isSyncing={isLoading}
+        lastSync={syncStatus?.syncedAt ? new Date(syncStatus.syncedAt) : null}
+        isSyncing={syncMutation.isPending}
+        syncError={syncStatus?.success === "false" ? syncStatus.errorMessage : undefined}
         onRefresh={handleRefresh}
       />
       

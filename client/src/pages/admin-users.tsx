@@ -144,7 +144,7 @@ export default function AdminUsers() {
     setEditingUser(user);
     setUsername(user.username);
     setRole(user.role);
-    setMemberId(user.memberId || "");
+    setMemberId(user.memberId || "none");
     setEpaperId(user.epaperId || "");
     setFirstName(user.firstName || "");
     setLastName(user.lastName || "");
@@ -157,7 +157,7 @@ export default function AdminUsers() {
     
     const data: any = {
       role,
-      memberId: memberId || null,
+      memberId: memberId && memberId !== "none" ? memberId : null,
       epaperId: epaperId || null,
       firstName: firstName || null,
       lastName: lastName || null,
@@ -279,7 +279,7 @@ export default function AdminUsers() {
                         <SelectValue placeholder="Select member (optional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {members.map((member) => (
                           <SelectItem key={member.id} value={member.id}>
                             {member.name}
@@ -401,7 +401,7 @@ export default function AdminUsers() {
                       <SelectValue placeholder="Select member (optional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {members.map((member) => (
                         <SelectItem key={member.id} value={member.id}>
                           {member.name}
