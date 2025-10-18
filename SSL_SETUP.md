@@ -301,13 +301,15 @@ Edit `docker-compose.yml`:
   nginx:
     environment:
       CERTBOT_EMAIL: ${CERTBOT_EMAIL}
-      DOMAIN: ${DOMAIN}
+      DOMAINS: ${DOMAIN}
       STAGING: 1  # <-- Uncomment this line
 ```
 
 This uses Let's Encrypt staging server (certificates won't be trusted by browsers, but good for testing).
 
 **Remove `STAGING: 1` for production!**
+
+**Note:** Your `.env` file still uses `DOMAIN` (singular) - docker-compose automatically passes it as `DOMAINS` (plural) to the container.
 
 ---
 
