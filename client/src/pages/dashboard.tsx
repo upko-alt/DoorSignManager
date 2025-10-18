@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { MemberStatusCard } from "@/components/member-status-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -10,7 +10,9 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import type { User, UpdateStatus, StatusOption, SyncStatus } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useEffect, useState } from "react";
-import { AlertCircle, Shield } from "lucide-react";
+import { AlertCircle, Shield, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
 export default function Dashboard() {
   const { toast } = useToast();
@@ -32,6 +34,16 @@ export default function Dashboard() {
   const { data: syncStatus } = useQuery<SyncStatus>({
     queryKey: ["/api/sync/status"],
     refetchInterval: 30000, // Auto-refresh every 30 seconds
+  });
+
+  // Fetch e-paper verification data
+  const { data: verificationData = [], isLoading: isLoadingVerification, refetch: refetchVerification } = useQuery<Array<{
+    username: string;
+    epaperStatus: string | null;
+    error: string | null;
+  }>>({
+    queryKey: ["/api/epaper/verify"],
+    refetchInterval: 60000, // Auto-refresh every 60 seconds
   });
 
   // Update status mutation
@@ -225,18 +237,92 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {members.map((member) => (
-              <MemberStatusCard
-                key={member.id}
-                member={member}
-                onUpdateStatus={handleUpdateStatus}
-                isUpdating={updatingMembers.has(member.id)}
-                readOnly={!isAdmin && member.id !== user?.id}
-                statusOptions={statusOptions}
-              />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {members.map((member) => (
+                <MemberStatusCard
+                  key={member.id}
+                  member={member}
+                  onUpdateStatus={handleUpdateStatus}
+                  isUpdating={updatingMembers.has(member.id)}
+                  readOnly={!isAdmin && member.id !== user?.id}
+                  statusOptions={statusOptions}
+                />
+              ))}
+            </div>
+
+            {/* E-Paper Verification Table */}
+            <Card className="mt-8" data-testid="card-verification">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
+                <CardTitle className="text-xl font-semibold">E-Paper System Verification</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => refetchVerification()}
+                  disabled={isLoadingVerification}
+                  data-testid="button-refresh-verification"
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${isLoadingVerification ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {isLoadingVerification ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead data-testid="header-username">Username</TableHead>
+                        <TableHead data-testid="header-epaper-status">E-Paper Status</TableHead>
+                        <TableHead data-testid="header-status">Status</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {verificationData.map((item) => (
+                        <TableRow key={item.username} data-testid={`row-verification-${item.username}`}>
+                          <TableCell className="font-medium" data-testid={`text-username-${item.username}`}>
+                            {item.username}
+                          </TableCell>
+                          <TableCell data-testid={`text-epaper-status-${item.username}`}>
+                            {item.epaperStatus || (
+                              <span className="text-muted-foreground italic">No data</span>
+                            )}
+                          </TableCell>
+                          <TableCell data-testid={`status-icon-${item.username}`}>
+                            {item.error ? (
+                              <div className="flex items-center gap-2 text-destructive">
+                                <XCircle className="h-4 w-4" />
+                                <span className="text-sm">{item.error}</span>
+                              </div>
+                            ) : item.epaperStatus ? (
+                              <div className="flex items-center gap-2 text-green-600">
+                                <CheckCircle className="h-4 w-4" />
+                                <span className="text-sm">Active</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <AlertCircle className="h-4 w-4" />
+                                <span className="text-sm">Not configured</span>
+                              </div>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+                <p className="text-sm text-muted-foreground mt-4" data-testid="text-verification-description">
+                  This table shows the current status values stored in the e-paper system. 
+                  It does not sync back to the dashboard — it's for verification only.
+                </p>
+              </CardContent>
+            </Card>
+          </>
         )}
       </main>
     </div>
