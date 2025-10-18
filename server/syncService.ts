@@ -58,12 +58,16 @@ export class SyncService {
         }
       }
       
-      // Record sync status
-      await storage.createSyncStatus({
-        success: "true",
-        errorMessage: null,
-        updatedCount: updatedCount.toString(),
-      });
+      // Record sync status (but don't crash if database is unavailable)
+      try {
+        await storage.createSyncStatus({
+          success: "true",
+          errorMessage: null,
+          updatedCount: updatedCount.toString(),
+        });
+      } catch (dbError) {
+        console.error("[Sync Service] Could not record sync status:", dbError instanceof Error ? dbError.message : "Unknown error");
+      }
       
       console.log(`[Sync Service] Sync completed. Updated ${updatedCount} user(s).`);
       
@@ -72,12 +76,16 @@ export class SyncService {
       const errorMessage = error instanceof Error ? error.message : "Unknown error";
       console.error("[Sync Service] Sync failed:", errorMessage);
       
-      // Record failed sync
-      await storage.createSyncStatus({
-        success: "false",
-        errorMessage,
-        updatedCount: "0",
-      });
+      // Try to record failed sync (but don't crash if database is unavailable)
+      try {
+        await storage.createSyncStatus({
+          success: "false",
+          errorMessage,
+          updatedCount: "0",
+        });
+      } catch (dbError) {
+        console.error("[Sync Service] Could not record sync status:", dbError instanceof Error ? dbError.message : "Unknown error");
+      }
       
       return { success: false, updatedCount: 0, error: errorMessage };
     }
