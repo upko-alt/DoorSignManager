@@ -10,26 +10,26 @@ import { syncService } from "./syncService";
 
 // E-paper API service
 class EpaperService {
-  async sendStatusUpdate(importUrl: string, importKey: string, epaperId: string, status: string, customText?: string): Promise<void> {
+  async sendStatusUpdate(importUrl: string, importKey: string, username: string, status: string, customText?: string): Promise<void> {
     if (!importUrl || !importKey) {
-      console.warn(`E-paper import credentials not configured for ${epaperId}. Skipping external update.`);
+      console.warn(`E-paper import credentials not configured for ${username}. Skipping external update.`);
       return;
     }
 
     try {
       const statusValue = customText || status;
       
-      const url = `${importUrl}/?import_key=${encodeURIComponent(importKey)}&${epaperId}_status=${encodeURIComponent(statusValue)}`;
+      const url = `${importUrl}/?import_key=${encodeURIComponent(importKey)}&status_${username}=${encodeURIComponent(statusValue)}`;
       
       const response = await fetch(url, { method: 'GET' });
       
       if (!response.ok) {
-        console.error(`Failed to update e-paper for ${epaperId}: ${response.status}`);
+        console.error(`Failed to update e-paper for ${username}: ${response.status}`);
       } else {
-        console.log(`Successfully updated e-paper for ${epaperId}`);
+        console.log(`Successfully updated e-paper for ${username}`);
       }
     } catch (error) {
-      console.error(`Error updating e-paper for ${epaperId}:`, error);
+      console.error(`Error updating e-paper for ${username}:`, error);
       throw error;
     }
   }
@@ -161,11 +161,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send update to e-paper system using per-user credentials
       try {
-        if (user.epaperId && user.epaperImportUrl && user.epaperApiKey) {
+        if (user.epaperImportUrl && user.epaperApiKey) {
           await epaperService.sendStatusUpdate(
             user.epaperImportUrl,
             user.epaperApiKey,
-            user.epaperId,
+            user.username,
             validated.status,
             validated.customText
           );
