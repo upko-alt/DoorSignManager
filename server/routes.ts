@@ -465,7 +465,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const statusKey = `status_${user.username}`;
           
           // Extract just the .value field from the e-paper object {value, datetime, note}
-          const statusValue = data[statusKey]?.value || null;
+          const rawStatus = data[statusKey];
+          const statusValue = rawStatus?.value ?? null;
+          
+          // Log for debugging
+          if (rawStatus) {
+            console.log(`[E-paper Verify] ${user.username}: extracted "${statusValue}" from`, rawStatus);
+          }
           
           verificationData.push({
             username: user.username,

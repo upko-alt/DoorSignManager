@@ -17,7 +17,7 @@ Preferred communication style: Simple, everyday language.
   - Added verification table to display current e-paper system status (read-only, no sync-back)
   - Import URL format changed to use `status_(username)` instead of `(epaperId)_status`
 - **Per-User E-Paper Credentials**
-  - Each user has: `epaperImportUrl`, `epaperExportUrl`, `epaperApiKey` stored in users table
+  - Each user has: `epaperImportUrl`, `epaperExportUrl`, `epaperImportKey`, `epaperExportKey` (split into separate import/export keys)
   - Admins can configure e-paper endpoints individually for each user through the Add/Edit user dialogs
   - Users without e-paper configuration are automatically skipped during updates
 - **E-Paper Verification Table**
@@ -25,10 +25,12 @@ Preferred communication style: Simple, everyday language.
   - Dashboard displays verification table showing what's in e-paper system
   - Verification data is refreshed on-demand, not automatically synced back to dashboard
   - Helps admins verify that e-paper displays are showing correct status
+  - **IMPORTANT FIX**: E-paper API returns objects with `{value, datetime, note}` structure - endpoint now extracts just the `.value` field to return strings instead of objects (prevents React error #31)
 - **Security Hardening**
   - Implemented role-based filtering for e-paper credentials in API responses
   - Non-admin users cannot see any user's e-paper API keys, URLs, or endpoints
   - Only admins can view and manage e-paper credentials through `/api/members` endpoints
+  - Auth code now handles missing password hashes gracefully (returns 401 instead of 500)
 
 ### October 17, 2025
 
