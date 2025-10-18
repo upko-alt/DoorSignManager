@@ -18,6 +18,26 @@ The dashboard uses the `jonasal/nginx-certbot` Docker image which:
 
 ---
 
+## How It Works: Dynamic Configuration
+
+The system uses a **template-based approach** for nginx configuration:
+
+1. **Template File**: `deploy/nginx-docker.conf.template` contains placeholders like `${DOMAIN}`
+2. **Init Script**: When the container starts, `/docker-entrypoint.d/40-substitute-domain.sh` automatically runs
+3. **Variable Substitution**: The init script uses `envsubst` to replace `${DOMAIN}` with your actual domain
+4. **Config Generation**: The final config is written to `/etc/nginx/user_conf.d/app.conf`
+5. **Certificate Request**: The nginx-certbot image scans the generated config for domain names and automatically requests certificates
+
+**Benefits of this approach:**
+- ✅ Fully dynamic - just set `DOMAIN` in your `.env` file
+- ✅ No manual config editing required per deployment
+- ✅ Clean separation of configuration template and environment-specific values
+- ✅ Same template works across dev, staging, and production
+
+**You don't need to do anything special** - the system handles everything automatically!
+
+---
+
 ## Prerequisites
 
 Before starting, ensure:
@@ -71,6 +91,12 @@ COOKIE_SECURE=true
 ```bash
 DOMAIN="example.com www.example.com"
 ```
+
+**Multi-Domain Details:**
+- The **first domain** is treated as the primary domain for certificate storage paths
+- **All domains** are included in the nginx `server_name` directive
+- Let's Encrypt will issue a **single certificate** covering all listed domains
+- Example: `DOMAIN="example.com www.example.com"` creates one cert valid for both domains
 
 ### What Each Variable Does:
 

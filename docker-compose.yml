@@ -86,13 +86,18 @@ services:
     environment:
       CERTBOT_EMAIL: ${CERTBOT_EMAIL:?Please set CERTBOT_EMAIL in .env}
       DOMAINS: ${DOMAIN:?Please set DOMAIN in .env}
+      DOMAIN: ${DOMAIN:?Please set DOMAIN in .env}  # For envsubst in init script
       # Use staging server for testing (remove for production)
       # STAGING: 1
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./deploy/nginx-docker.conf:/etc/nginx/user_conf.d/default.conf:ro
+      # Mount the init script (automatically runs before nginx starts)
+      - ./deploy/docker-entrypoint.d/40-substitute-domain.sh:/docker-entrypoint.d/40-substitute-domain.sh:ro
+      # Mount the template file (init script will process it)
+      - ./deploy/nginx-docker.conf.template:/tmp/nginx.conf.template:ro
+      # Persistent certificate storage
       - nginx_secrets:/etc/letsencrypt
       - nginx_cache:/var/cache/nginx
     logging:
