@@ -10,6 +10,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 18, 2025 - Dynamic SSL Configuration with envsubst
+- **Fixed SSL Setup for jonasal/nginx-certbot**
+  - Implemented template-based nginx configuration with `envsubst` for dynamic domain substitution
+  - Created init script (`deploy/docker-entrypoint.d/40-substitute-domain.sh`) that runs automatically on container startup
+  - Template file (`deploy/nginx-docker.conf.template`) uses `${DOMAIN}` and `${PRIMARY_DOMAIN}` placeholders
+  - Supports both single-domain and multi-domain certificates (space-separated domains)
+  - Multi-domain: first domain becomes PRIMARY_DOMAIN for certificate paths, all domains in server_name
+  - Eliminates need for manual config editing per deployment
+  - Updated SSL_SETUP.md with comprehensive documentation of the dynamic configuration approach
+
 ### October 18, 2025 - Simplified E-Paper Integration (One-Way Only)
 - **Simplified E-Paper Flow**
   - E-paper integration is now **one-way only**: Dashboard → E-paper displays
