@@ -48,6 +48,9 @@ export default function AdminUsers() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [epaperImportUrl, setEpaperImportUrl] = useState("");
+  const [epaperExportUrl, setEpaperExportUrl] = useState("");
+  const [epaperApiKey, setEpaperApiKey] = useState("");
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -119,6 +122,9 @@ export default function AdminUsers() {
     setFirstName("");
     setLastName("");
     setEmail("");
+    setEpaperImportUrl("");
+    setEpaperExportUrl("");
+    setEpaperApiKey("");
   };
 
   const handleEdit = (user: User) => {
@@ -129,6 +135,9 @@ export default function AdminUsers() {
     setFirstName(user.firstName || "");
     setLastName(user.lastName || "");
     setEmail(user.email || "");
+    setEpaperImportUrl(user.epaperImportUrl || "");
+    setEpaperExportUrl(user.epaperExportUrl || "");
+    setEpaperApiKey(user.epaperApiKey || "");
     setPassword("");
   };
 
@@ -141,6 +150,9 @@ export default function AdminUsers() {
       firstName: firstName || null,
       lastName: lastName || null,
       email: email || null,
+      epaperImportUrl: epaperImportUrl || null,
+      epaperExportUrl: epaperExportUrl || null,
+      epaperApiKey: epaperApiKey || null,
     };
 
     if (editingUser) {
@@ -277,6 +289,49 @@ export default function AdminUsers() {
                       ID used to match with external e-paper system
                     </p>
                   </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="epaperImportUrl">E-Paper Import URL</Label>
+                    <Input
+                      id="epaperImportUrl"
+                      value={epaperImportUrl}
+                      onChange={(e) => setEpaperImportUrl(e.target.value)}
+                      placeholder="https://example.com/import"
+                      data-testid="input-epaper-import-url"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      URL endpoint to send status updates to e-paper display
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="epaperExportUrl">E-Paper Export URL</Label>
+                    <Input
+                      id="epaperExportUrl"
+                      value={epaperExportUrl}
+                      onChange={(e) => setEpaperExportUrl(e.target.value)}
+                      placeholder="https://example.com/export"
+                      data-testid="input-epaper-export-url"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      URL endpoint to fetch current status from e-paper system
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="epaperApiKey">E-Paper API Key</Label>
+                    <Input
+                      id="epaperApiKey"
+                      type="password"
+                      value={epaperApiKey}
+                      onChange={(e) => setEpaperApiKey(e.target.value)}
+                      placeholder="API key for e-paper endpoints"
+                      data-testid="input-epaper-api-key"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Authentication key for e-paper API requests
+                    </p>
+                  </div>
                 </div>
 
                 <DialogFooter>
@@ -384,6 +439,49 @@ export default function AdminUsers() {
                   />
                   <p className="text-xs text-muted-foreground">
                     ID used to match with external e-paper system
+                  </p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-epaperImportUrl">E-Paper Import URL</Label>
+                  <Input
+                    id="edit-epaperImportUrl"
+                    value={epaperImportUrl}
+                    onChange={(e) => setEpaperImportUrl(e.target.value)}
+                    placeholder="https://example.com/import"
+                    data-testid="input-edit-epaper-import-url"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    URL endpoint to send status updates to e-paper display
+                  </p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-epaperExportUrl">E-Paper Export URL</Label>
+                  <Input
+                    id="edit-epaperExportUrl"
+                    value={epaperExportUrl}
+                    onChange={(e) => setEpaperExportUrl(e.target.value)}
+                    placeholder="https://example.com/export"
+                    data-testid="input-edit-epaper-export-url"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    URL endpoint to fetch current status from e-paper system
+                  </p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-epaperApiKey">E-Paper API Key</Label>
+                  <Input
+                    id="edit-epaperApiKey"
+                    type="password"
+                    value={epaperApiKey}
+                    onChange={(e) => setEpaperApiKey(e.target.value)}
+                    placeholder="API key for e-paper endpoints"
+                    data-testid="input-edit-epaper-api-key"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Authentication key for e-paper API requests
                   </p>
                 </div>
               </div>

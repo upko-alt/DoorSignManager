@@ -4,20 +4,17 @@ import { storage } from "./storage";
 export class SyncService {
   private syncInterval: NodeJS.Timeout | null = null;
   private readonly SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
-  private exportUrl: string;
-  private exportKey: string;
 
   constructor() {
-    this.exportUrl = process.env.EPAPER_EXPORT_URL || "";
-    this.exportKey = process.env.EPAPER_EXPORT_KEY || "";
+    // No global credentials needed - each user has their own
   }
 
-  async fetchCurrentStatuses(): Promise<Record<string, any>> {
-    if (!this.exportUrl || !this.exportKey) {
+  async fetchUserStatuses(exportUrl: string, exportKey: string): Promise<Record<string, any>> {
+    if (!exportUrl || !exportKey) {
       throw new Error("E-paper export credentials not configured");
     }
 
-    const url = `${this.exportUrl}/?export_key=${encodeURIComponent(this.exportKey)}&my_values=json`;
+    const url = `${exportUrl}/?export_key=${encodeURIComponent(exportKey)}&my_values=json`;
     
     const response = await fetch(url, { method: 'GET' });
     
@@ -26,7 +23,6 @@ export class SyncService {
     }
     
     const data = await response.json();
-    console.log("Fetched e-paper statuses:", data);
     return data;
   }
 
@@ -34,22 +30,31 @@ export class SyncService {
     try {
       console.log("[Sync Service] Starting periodic sync...");
       
-      const statuses = await this.fetchCurrentStatuses();
-      
-      // Update member statuses from e-paper data
       let updatedCount = 0;
-      const members = await storage.getMembers();
+      const users = await storage.getAllUsers();
       
-      for (const member of members) {
-        if (!member.email) continue;
+      // Sync each user that has e-paper configuration
+      for (const user of users) {
+        // Skip users without e-paper configuration
+        if (!user.epaperExportUrl || !user.epaperApiKey || !user.epaperId) {
+          console.log(`[Sync Service] Skipping user ${user.username} - no e-paper config`);
+          continue;
+        }
         
-        const sanitizedEmail = member.email.replace(/[@.]/g, "_");
-        const statusKey = `${sanitizedEmail}_status`;
-        
-        if (statuses[statusKey] && statuses[statusKey] !== member.currentStatus) {
-          await storage.updateMemberStatus(member.id, statuses[statusKey]);
-          updatedCount++;
-          console.log(`[Sync Service] Updated ${member.name}: ${member.currentStatus} -> ${statuses[statusKey]}`);
+        try {
+          const statuses = await this.fetchUserStatuses(user.epaperExportUrl, user.epaperApiKey);
+          
+          // Look for status key using epaperId
+          const statusKey = `${user.epaperId}_status`;
+          
+          if (statuses[statusKey] && statuses[statusKey] !== user.currentStatus) {
+            await storage.updateUserStatus(user.id, statuses[statusKey]);
+            updatedCount++;
+            console.log(`[Sync Service] Updated ${user.username} (${user.epaperId}): ${user.currentStatus} -> ${statuses[statusKey]}`);
+          }
+        } catch (userError) {
+          console.error(`[Sync Service] Failed to sync user ${user.username}:`, userError instanceof Error ? userError.message : "Unknown error");
+          // Continue with other users even if one fails
         }
       }
       
@@ -60,7 +65,7 @@ export class SyncService {
         updatedCount: updatedCount.toString(),
       });
       
-      console.log(`[Sync Service] Sync completed. Updated ${updatedCount} member(s).`);
+      console.log(`[Sync Service] Sync completed. Updated ${updatedCount} user(s).`);
       
       return { success: true, updatedCount };
     } catch (error) {

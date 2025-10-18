@@ -6,68 +6,31 @@ import { setupAuth, isAuthenticated, isAdmin } from "./auth";
 import { z } from "zod";
 import bcrypt from "bcrypt";
 import passport from "passport";
+import { syncService } from "./syncService";
 
 // E-paper API service
 class EpaperService {
-  private importUrl: string;
-  private exportUrl: string;
-  private importKey: string;
-  private exportKey: string;
-
-  constructor() {
-    this.importUrl = process.env.EPAPER_IMPORT_URL || "";
-    this.exportUrl = process.env.EPAPER_EXPORT_URL || "";
-    this.importKey = process.env.EPAPER_IMPORT_KEY || "";
-    this.exportKey = process.env.EPAPER_EXPORT_KEY || "";
-  }
-
-  async sendStatusUpdate(memberEmail: string, status: string, customText?: string): Promise<void> {
-    if (!this.importUrl || !this.importKey) {
-      console.warn("E-paper import credentials not configured. Skipping external update.");
+  async sendStatusUpdate(importUrl: string, importKey: string, epaperId: string, status: string, customText?: string): Promise<void> {
+    if (!importUrl || !importKey) {
+      console.warn(`E-paper import credentials not configured for ${epaperId}. Skipping external update.`);
       return;
     }
 
     try {
-      const sanitizedEmail = memberEmail.replace(/[@.]/g, "_");
       const statusValue = customText || status;
       
-      const url = `${this.importUrl}/?import_key=${encodeURIComponent(this.importKey)}&${sanitizedEmail}_status=${encodeURIComponent(statusValue)}`;
+      const url = `${importUrl}/?import_key=${encodeURIComponent(importKey)}&${epaperId}_status=${encodeURIComponent(statusValue)}`;
       
       const response = await fetch(url, { method: 'GET' });
       
       if (!response.ok) {
-        console.error(`Failed to update e-paper for ${memberEmail}: ${response.status}`);
+        console.error(`Failed to update e-paper for ${epaperId}: ${response.status}`);
       } else {
-        console.log(`Successfully updated e-paper for ${memberEmail}`);
+        console.log(`Successfully updated e-paper for ${epaperId}`);
       }
     } catch (error) {
-      console.error("Error updating e-paper:", error);
+      console.error(`Error updating e-paper for ${epaperId}:`, error);
       throw error;
-    }
-  }
-
-  async fetchCurrentStatuses(): Promise<Record<string, any>> {
-    if (!this.exportUrl || !this.exportKey) {
-      console.warn("E-paper export credentials not configured. Skipping external fetch.");
-      return {};
-    }
-
-    try {
-      const url = `${this.exportUrl}/?export_key=${encodeURIComponent(this.exportKey)}&my_values=json`;
-      
-      const response = await fetch(url, { method: 'GET' });
-      
-      if (!response.ok) {
-        console.error(`Failed to fetch e-paper statuses: ${response.status}`);
-        return {};
-      }
-      
-      const data = await response.json();
-      console.log("Fetched e-paper statuses:", data);
-      return data;
-    } catch (error) {
-      console.error("Error fetching e-paper statuses:", error);
-      return {};
     }
   }
 }
@@ -104,11 +67,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get all users with their status (protected - requires login)
-  app.get("/api/members", isAuthenticated, async (req, res) => {
+  app.get("/api/members", isAuthenticated, async (req: any, res) => {
     try {
+      const currentUser = req.user;
       const users = await storage.getAllUsers();
-      const usersWithoutPasswords = users.map(({ passwordHash: _, ...user }) => user);
-      res.json(usersWithoutPasswords);
+      
+      // Filter sensitive fields for non-admin users
+      const sanitizedUsers = users.map((user) => {
+        const { passwordHash, epaperApiKey, epaperImportUrl, epaperExportUrl, ...publicUser } = user;
+        
+        // Only admins can see e-paper credentials
+        if (currentUser.role === "admin") {
+          return { ...publicUser, epaperApiKey, epaperImportUrl, epaperExportUrl };
+        }
+        
+        return publicUser;
+      });
+      
+      res.json(sanitizedUsers);
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).json({ 
@@ -119,14 +95,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get single user with status (protected - requires login)
-  app.get("/api/members/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/members/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const currentUser = req.user;
       const user = await storage.getUser(req.params.id);
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
-      const { passwordHash: _, ...userWithoutPassword } = user;
-      res.json(userWithoutPassword);
+      
+      const { passwordHash, epaperApiKey, epaperImportUrl, epaperExportUrl, ...publicUser } = user;
+      
+      // Only admins can see e-paper credentials
+      if (currentUser.role === "admin") {
+        res.json({ ...publicUser, epaperApiKey, epaperImportUrl, epaperExportUrl });
+      } else {
+        res.json(publicUser);
+      }
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ 
@@ -175,10 +159,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Failed to log status change to history:", historyError);
       }
 
-      // Send update to e-paper system using epaperId
+      // Send update to e-paper system using per-user credentials
       try {
-        if (user.epaperId) {
+        if (user.epaperId && user.epaperImportUrl && user.epaperApiKey) {
           await epaperService.sendStatusUpdate(
+            user.epaperImportUrl,
+            user.epaperApiKey,
             user.epaperId,
             validated.status,
             validated.customText
@@ -188,8 +174,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("E-paper update failed, but local update succeeded:", epaperError);
       }
 
-      const { passwordHash: _, ...userWithoutPassword } = updatedUser;
-      res.json(userWithoutPassword);
+      // Filter sensitive fields for non-admin users
+      const { passwordHash, epaperApiKey, epaperImportUrl, epaperExportUrl, ...publicUser } = updatedUser;
+      
+      if (currentUser.role === "admin") {
+        res.json({ ...publicUser, epaperApiKey, epaperImportUrl, epaperExportUrl });
+      } else {
+        res.json(publicUser);
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ 
@@ -240,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/users", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { username, password, role, epaperId, firstName, lastName, email } = req.body;
+      const { username, password, role, epaperId, firstName, lastName, email, epaperImportUrl, epaperExportUrl, epaperApiKey } = req.body;
       
       if (!username || !password) {
         return res.status(400).json({ error: "Username and password are required" });
@@ -260,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordHash = await bcrypt.hash(password, 10);
 
       // Create user with all fields
-      const user = await storage.createUser(username, passwordHash, role || "regular", epaperId, email, firstName, lastName);
+      const user = await storage.createUser(username, passwordHash, role || "regular", epaperId, email, firstName, lastName, epaperImportUrl, epaperExportUrl, epaperApiKey);
 
       const { passwordHash: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -273,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/users/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { role, epaperId, firstName, lastName, email, password } = req.body;
+      const { role, epaperId, firstName, lastName, email, password, epaperImportUrl, epaperExportUrl, epaperApiKey } = req.body;
       
       const updates: Partial<User> = {};
       if (role) updates.role = role;
@@ -281,6 +273,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (firstName !== undefined) updates.firstName = firstName;
       if (lastName !== undefined) updates.lastName = lastName;
       if (email !== undefined) updates.email = email;
+      if (epaperImportUrl !== undefined) updates.epaperImportUrl = epaperImportUrl;
+      if (epaperExportUrl !== undefined) updates.epaperExportUrl = epaperExportUrl;
+      if (epaperApiKey !== undefined) updates.epaperApiKey = epaperApiKey;
       
       // Update password if provided
       if (password) {
@@ -388,46 +383,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Sync statuses from e-paper system (protected - requires admin role)
   app.post("/api/sync", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const statuses = await epaperService.fetchCurrentStatuses();
+      const result = await syncService.performSync();
       
-      // Update user statuses from e-paper data
-      let updatedCount = 0;
-      const users = await storage.getAllUsers();
-      
-      for (const user of users) {
-        if (!user.epaperId) continue;
-        
-        const sanitizedEpaperId = user.epaperId.replace(/[@.]/g, "_");
-        const statusKey = `${sanitizedEpaperId}_status`;
-        
-        if (statuses[statusKey] && statuses[statusKey] !== user.currentStatus) {
-          await storage.updateUserStatus(user.id, statuses[statusKey]);
-          updatedCount++;
-        }
+      if (result.success) {
+        res.json({ 
+          success: true, 
+          updatedCount: result.updatedCount,
+          syncedAt: new Date().toISOString()
+        });
+      } else {
+        res.status(500).json({ 
+          error: "Failed to sync statuses",
+          message: result.error || "Unknown error"
+        });
       }
-      
-      // Record sync status
-      await storage.createSyncStatus({
-        success: "true",
-        errorMessage: null,
-        updatedCount: updatedCount.toString(),
-      });
-      
-      res.json({ 
-        success: true, 
-        updatedCount,
-        syncedAt: new Date().toISOString()
-      });
     } catch (error) {
       console.error("Error syncing from e-paper:", error);
-      
-      // Record failed sync
-      await storage.createSyncStatus({
-        success: "false",
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
-        updatedCount: "0",
-      });
-      
       res.status(500).json({ 
         error: "Failed to sync statuses",
         message: error instanceof Error ? error.message : "Unknown error"

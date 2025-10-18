@@ -8,7 +8,7 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(username: string, passwordHash: string, role?: string, epaperId?: string, email?: string, firstName?: string, lastName?: string): Promise<User>;
+  createUser(username: string, passwordHash: string, role?: string, epaperId?: string, email?: string, firstName?: string, lastName?: string, epaperImportUrl?: string, epaperExportUrl?: string, epaperApiKey?: string): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
   getAllUsers(): Promise<User[]>;
@@ -52,7 +52,7 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async createUser(username: string, passwordHash: string, role: string = "regular", epaperId?: string, email?: string, firstName?: string, lastName?: string): Promise<User> {
+  async createUser(username: string, passwordHash: string, role: string = "regular", epaperId?: string, email?: string, firstName?: string, lastName?: string, epaperImportUrl?: string, epaperExportUrl?: string, epaperApiKey?: string): Promise<User> {
     // Check if this is the first user (make them admin)
     const allUsers = await this.db.select().from(users);
     const isFirstUser = allUsers.length === 0;
@@ -67,6 +67,9 @@ export class DbStorage implements IStorage {
         email: email || null,
         firstName: firstName || null,
         lastName: lastName || null,
+        epaperImportUrl: epaperImportUrl || null,
+        epaperExportUrl: epaperExportUrl || null,
+        epaperApiKey: epaperApiKey || null,
       })
       .returning();
     return user;
@@ -195,7 +198,7 @@ export class MemStorage implements IStorage {
     return Array.from(this.usersMap.values()).find(u => u.username === username);
   }
 
-  async createUser(username: string, passwordHash: string, role: string = "regular", epaperId?: string, email?: string, firstName?: string, lastName?: string): Promise<User> {
+  async createUser(username: string, passwordHash: string, role: string = "regular", epaperId?: string, email?: string, firstName?: string, lastName?: string, epaperImportUrl?: string, epaperExportUrl?: string, epaperApiKey?: string): Promise<User> {
     const id = randomUUID();
     const isFirstUser = this.usersMap.size === 0;
     
@@ -208,6 +211,9 @@ export class MemStorage implements IStorage {
       lastName: lastName || null,
       role: isFirstUser ? "admin" : role,
       epaperId: epaperId || `user_${username}`,
+      epaperImportUrl: epaperImportUrl || null,
+      epaperExportUrl: epaperExportUrl || null,
+      epaperApiKey: epaperApiKey || null,
       avatarUrl: null,
       currentStatus: "Available",
       customStatusText: null,
