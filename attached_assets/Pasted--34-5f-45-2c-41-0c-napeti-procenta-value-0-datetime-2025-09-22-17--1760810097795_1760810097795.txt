@@ -1,0 +1,87 @@
+{
+    "34:5f:45:2c:41:0c-napeti-procenta": {
+        "value": 0,
+        "datetime": "2025-09-22 17:57:57",
+        "note": "Janka (648x480)"
+    },
+    "34:5f:45:2c:41:0c-napeti-volty": {
+        "value": 2.94,
+        "datetime": "2025-09-22 17:57:57",
+        "note": "Janka (648x480)"
+    },
+    "34:5f:45:2c:41:0c-posledni-kontakt-kdy": {
+        "value": "22.9. v 17:57",
+        "datetime": "2025-09-22 17:57:57",
+        "note": "Janka (648x480)"
+    },
+    "34:5f:45:2c:41:0c-signal-dbm": {
+        "value": -69,
+        "datetime": "2025-09-22 17:57:57",
+        "note": "Janka (648x480)"
+    },
+    "34:5f:45:2c:41:0c-ssid": {
+        "value": "NODE RASP",
+        "datetime": "2025-09-22 17:57:57",
+        "note": "Janka (648x480)"
+    },
+    "34:5f:45:2d:76:10-napeti-procenta": {
+        "value": 70,
+        "datetime": "2025-10-18 19:54:19",
+        "note": "Filip (648x480)"
+    },
+    "34:5f:45:2d:76:10-napeti-volty": {
+        "value": 3.77,
+        "datetime": "2025-10-18 19:54:19",
+        "note": "Filip (648x480)"
+    },
+    "34:5f:45:2d:76:10-posledni-kontakt-kdy": {
+        "value": "dnes v 19:54",
+        "datetime": "2025-10-18 19:54:19",
+        "note": "Filip (648x480)"
+    },
+    "34:5f:45:2d:76:10-signal-dbm": {
+        "value": -55,
+        "datetime": "2025-10-18 19:54:19",
+        "note": "Filip (648x480)"
+    },
+    "34:5f:45:2d:76:10-ssid": {
+        "value": "NODE RASP",
+        "datetime": "2025-10-18 19:54:19",
+        "note": "Filip (648x480)"
+    },
+    "34:5f:45:2d:de:74-napeti-procenta": {
+        "value": 9,
+        "datetime": "2025-07-03 00:58:30",
+        "note": "Mirko (648x480)"
+    },
+    "34:5f:45:2d:de:74-napeti-volty": {
+        "value": 3.1,
+        "datetime": "2025-07-03 00:58:30",
+        "note": "Mirko (648x480)"
+    },
+    "34:5f:45:2d:de:74-posledni-kontakt-kdy": {
+        "value": "3.7. v 00:58",
+        "datetime": "2025-07-03 00:58:30",
+        "note": "Mirko (648x480)"
+    },
+    "34:5f:45:2d:de:74-signal-dbm": {
+        "value": -52,
+        "datetime": "2025-07-03 00:58:30",
+        "note": "Mirko (648x480)"
+    },
+    "34:5f:45:2d:de:74-ssid": {
+        "value": "NODE RASP",
+        "datetime": "2025-07-03 00:58:30",
+        "note": "Mirko (648x480)"
+    },
+    "status_admin": {
+        "value": "Niekde",
+        "datetime": "2025-10-18 19:06:42",
+        "note": null
+    },
+    "stav": {
+        "value": "somtu",
+        "datetime": "2025-10-18 18:13:09",
+        "note": null
+    }
+}
