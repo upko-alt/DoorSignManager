@@ -27,85 +27,16 @@ export class SyncService {
   }
 
   async performSync(): Promise<{ success: boolean; updatedCount: number; error?: string }> {
-    try {
-      console.log("[Sync Service] Starting periodic sync...");
-      
-      let updatedCount = 0;
-      const users = await storage.getAllUsers();
-      
-      // Sync each user that has e-paper configuration
-      for (const user of users) {
-        // Skip users without e-paper configuration
-        if (!user.epaperExportUrl || !user.epaperApiKey || !user.epaperId) {
-          console.log(`[Sync Service] Skipping user ${user.username} - no e-paper config`);
-          continue;
-        }
-        
-        try {
-          const statuses = await this.fetchUserStatuses(user.epaperExportUrl, user.epaperApiKey);
-          
-          // Look for status key using epaperId
-          const statusKey = `${user.epaperId}_status`;
-          
-          if (statuses[statusKey] && statuses[statusKey] !== user.currentStatus) {
-            await storage.updateUserStatus(user.id, statuses[statusKey]);
-            updatedCount++;
-            console.log(`[Sync Service] Updated ${user.username} (${user.epaperId}): ${user.currentStatus} -> ${statuses[statusKey]}`);
-          }
-        } catch (userError) {
-          console.error(`[Sync Service] Failed to sync user ${user.username}:`, userError instanceof Error ? userError.message : "Unknown error");
-          // Continue with other users even if one fails
-        }
-      }
-      
-      // Record sync status (but don't crash if database is unavailable)
-      try {
-        await storage.createSyncStatus({
-          success: "true",
-          errorMessage: null,
-          updatedCount: updatedCount.toString(),
-        });
-      } catch (dbError) {
-        console.error("[Sync Service] Could not record sync status:", dbError instanceof Error ? dbError.message : "Unknown error");
-      }
-      
-      console.log(`[Sync Service] Sync completed. Updated ${updatedCount} user(s).`);
-      
-      return { success: true, updatedCount };
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Unknown error";
-      console.error("[Sync Service] Sync failed:", errorMessage);
-      
-      // Try to record failed sync (but don't crash if database is unavailable)
-      try {
-        await storage.createSyncStatus({
-          success: "false",
-          errorMessage,
-          updatedCount: "0",
-        });
-      } catch (dbError) {
-        console.error("[Sync Service] Could not record sync status:", dbError instanceof Error ? dbError.message : "Unknown error");
-      }
-      
-      return { success: false, updatedCount: 0, error: errorMessage };
-    }
+    // DISABLED: No longer syncing back from e-paper to dashboard
+    // E-paper is now one-way only (dashboard -> e-paper)
+    console.log("[Sync Service] Sync-back disabled - e-paper integration is one-way only");
+    return { success: true, updatedCount: 0 };
   }
 
   start(): void {
-    if (this.syncInterval) {
-      console.warn("[Sync Service] Already running");
-      return;
-    }
-
-    console.log(`[Sync Service] Starting periodic sync every ${this.SYNC_INTERVAL_MS / 1000 / 60} minutes`);
-    
-    // Perform initial sync
-    this.performSync();
-    
-    // Schedule periodic sync
-    this.syncInterval = setInterval(() => {
-      this.performSync();
-    }, this.SYNC_INTERVAL_MS);
+    // DISABLED: No longer running periodic sync
+    // E-paper verification is now done on-demand via /api/epaper/verify endpoint
+    console.log("[Sync Service] Periodic sync disabled - use /api/epaper/verify for verification");
   }
 
   stop(): void {
