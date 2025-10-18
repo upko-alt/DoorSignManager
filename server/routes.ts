@@ -420,6 +420,66 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get e-paper verification data (shows what's currently in the e-paper system)
+  app.get("/api/epaper/verify", isAuthenticated, async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const verificationData: Array<{
+        username: string;
+        epaperStatus: string | null;
+        error: string | null;
+      }> = [];
+
+      for (const user of users) {
+        if (!user.epaperExportUrl || !user.epaperApiKey) {
+          verificationData.push({
+            username: user.username,
+            epaperStatus: null,
+            error: "No e-paper configuration"
+          });
+          continue;
+        }
+
+        try {
+          const url = `${user.epaperExportUrl}/?export_key=${encodeURIComponent(user.epaperApiKey)}&my_values=json`;
+          const response = await fetch(url, { method: 'GET' });
+
+          if (!response.ok) {
+            verificationData.push({
+              username: user.username,
+              epaperStatus: null,
+              error: `HTTP ${response.status}`
+            });
+            continue;
+          }
+
+          const data = await response.json();
+          const statusKey = `status_${user.username}`;
+          
+          verificationData.push({
+            username: user.username,
+            epaperStatus: data[statusKey] || null,
+            error: null
+          });
+        } catch (error) {
+          verificationData.push({
+            username: user.username,
+            epaperStatus: null,
+            error: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+
+      res.json(verificationData);
+    } catch (error) {
+      console.error("Error fetching e-paper verification data:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch e-paper verification data",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
