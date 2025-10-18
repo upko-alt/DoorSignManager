@@ -10,24 +10,25 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### October 18, 2025 - Per-User E-Paper Configuration
+### October 18, 2025 - Simplified E-Paper Integration (One-Way Only)
+- **Simplified E-Paper Flow**
+  - E-paper integration is now **one-way only**: Dashboard → E-paper displays
+  - Removed automatic sync-back logic that updated dashboard from e-paper system
+  - Added verification table to display current e-paper system status (read-only, no sync-back)
+  - Import URL format changed to use `status_(username)` instead of `(epaperId)_status`
 - **Per-User E-Paper Credentials**
-  - Moved e-paper configuration from global environment variables to per-user database fields
-  - Each user now has: `epaperImportUrl`, `epaperExportUrl`, `epaperApiKey` stored in users table
+  - Each user has: `epaperImportUrl`, `epaperExportUrl`, `epaperApiKey` stored in users table
   - Admins can configure e-paper endpoints individually for each user through the Add/Edit user dialogs
-  - Users without e-paper configuration are automatically skipped during sync operations
-- **Refactored E-Paper Services**
-  - Updated `syncService.ts` to iterate through users and use each user's own credentials instead of global env vars
-  - Updated `EpaperService` in `routes.ts` to accept per-user credentials as method parameters
-  - Sync continues operating even if individual user syncs fail (isolated error handling)
+  - Users without e-paper configuration are automatically skipped during updates
+- **E-Paper Verification Table**
+  - New `/api/epaper/verify` endpoint fetches current e-paper system status
+  - Dashboard displays verification table showing what's in e-paper system
+  - Verification data is refreshed on-demand, not automatically synced back to dashboard
+  - Helps admins verify that e-paper displays are showing correct status
 - **Security Hardening**
   - Implemented role-based filtering for e-paper credentials in API responses
   - Non-admin users cannot see any user's e-paper API keys, URLs, or endpoints
   - Only admins can view and manage e-paper credentials through `/api/members` endpoints
-  - Prevents credential leakage while maintaining admin functionality
-- **UI Improvements**
-  - Removed broken "available count" display from dashboard header (no longer accurate with custom statuses)
-  - Added three new input fields to admin user management forms for e-paper configuration
 
 ### October 17, 2025
 
@@ -70,16 +71,16 @@ Preferred communication style: Simple, everyday language.
   - History displayed in member detail view with timeline
   - Tracks who made changes and when
 
-### Automatic E-Paper Sync
-- **Background Sync Service**
-  - Runs every 5 minutes to fetch statuses from e-paper export endpoint
-  - Updates local database with external changes
-  - Properly handles and records sync failures
-- **Sync Status UI**
-  - Dashboard header displays last sync time
-  - Shows sync errors if credentials missing or fetch fails
-  - Manual sync trigger for admins via refresh button
-  - Success/failure indicators with detailed error messages
+### E-Paper Integration (One-Way Only)
+- **Status Updates**: Dashboard → E-paper displays only
+  - When users update their status in the dashboard, it's pushed to e-paper system
+  - No automatic sync-back from e-paper to dashboard
+  - E-paper acts as a display-only endpoint
+- **Verification Table**
+  - Dashboard displays current e-paper system status for verification
+  - Fetched on-demand from `/api/epaper/verify` endpoint
+  - Read-only display - does not update local database
+  - Helps admins verify e-paper displays are showing correct values
 
 ### Database Migration
 - **Migrated from in-memory to PostgreSQL**
@@ -181,14 +182,18 @@ Preferred communication style: Simple, everyday language.
   - `epaperExportUrl`: User-specific endpoint for fetching current status from e-paper system
   - `epaperApiKey`: User-specific API authentication key
   - All fields are optional and configured by admins through the user management interface
-- **Import API**: Sends status updates to e-paper displays
+- **Import API**: Sends status updates to e-paper displays (One-Way)
   - Authentication via API key in query parameter
-  - GET request with epaper ID-based parameter routing (e.g., `?user1_status=Available`)
+  - GET request format: `{importUrl}?import_key={apiKey}&status_{username}={statusValue}`
+  - Example: `https://in.zivyobraz.eu/?import_key=key123&status_admin=Available`
   - Supports custom status messages
-- **Export API**: Fetches current status from e-paper system
+  - Triggered when user updates status in dashboard
+- **Export API**: Fetches current status from e-paper system (Verification Only)
   - Authentication via API key in query parameter
-  - Used for synchronization and verification
-  - Sync service automatically iterates through all users with configured credentials
+  - GET request format: `{exportUrl}?export_key={apiKey}&my_values=json`
+  - Example: `https://out.zivyobraz.eu/?export_key=key456&my_values=json`
+  - Returns JSON with all status fields (e.g., `{"status_admin": "Available", "status_john": "In Meeting"}`)
+  - Used for verification table display only - does NOT sync back to dashboard
 - **Security**:
   - E-paper credentials are only visible to admin users via API
   - Non-admin users cannot see any e-paper URLs or API keys
