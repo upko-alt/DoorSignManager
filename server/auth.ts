@@ -52,6 +52,11 @@ export async function setupAuth(app: Express) {
           return done(null, false, { message: "Invalid username or password" });
         }
 
+        // Check if password hash exists
+        if (!user.passwordHash) {
+          return done(null, false, { message: "Invalid username or password" });
+        }
+
         const isValid = await bcrypt.compare(password, user.passwordHash);
         
         if (!isValid) {
