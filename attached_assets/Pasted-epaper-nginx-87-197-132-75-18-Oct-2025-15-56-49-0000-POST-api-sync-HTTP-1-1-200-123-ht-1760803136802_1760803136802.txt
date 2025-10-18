@@ -1,0 +1,31 @@
+epaper-nginx  | 87.197.132.75 - - [18/Oct/2025:15:56:49 +0000] "POST /api/sync HTTP/1.1" 200 123 "http://159.89.105.201/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15" "-"
+epaper-nginx  | 87.197.132.75 - - [18/Oct/2025:15:56:49 +0000] "GET /api/sync/status HTTP/1.1" 200 171 "http://159.89.105.201/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15" "-"
+epaper-app    | 3:56:49 PM [express] GET /api/sync/status 200 in 16ms :: {"id":"fb840b8c-0014-4d60-8eeb-87e67375e88d…
+epaper-nginx  | 87.197.132.75 - - [18/Oct/2025:15:56:49 +0000] "GET /api/members HTTP/1.1" 304 0 "http://159.89.105.201/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15" "-"
+epaper-app    | 3:56:49 PM [express] GET /api/members 304 in 38ms :: [{"id":"e24c0226-9f3c-4480-a099-55280710453c","…
+epaper-nginx  | 87.197.132.75 - - [18/Oct/2025:15:56:53 +0000] "GET /api/users HTTP/1.1" 200 259 "http://159.89.105.201/admin/users" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15" "-"
+epaper-app    | 3:56:53 PM [express] GET /api/users 200 in 12ms :: [{"id":"e24c0226-9f3c-4480-a099-55280710453c","us…
+Gracefully Stopping... press Ctrl+C again to force
+ Container epaper-nginx  Stopping
+epaper-nginx  | 2025/10/18 15:58:38 [notice] 1#1: signal 3 (SIGQUIT) received, shutting down
+epaper-nginx  | 2025/10/18 15:58:38 [notice] 20#20: gracefully shutting down
+epaper-nginx  | 2025/10/18 15:58:38 [notice] 20#20: exiting
+epaper-nginx  | 2025/10/18 15:58:38 [notice] 20#20: exit
+epaper-nginx  | 2025/10/18 15:58:38 [notice] 1#1: signal 17 (SIGCHLD) received from 20
+epaper-nginx  | 2025/10/18 15:58:38 [notice] 1#1: worker process 20 exited with code 0
+epaper-nginx  | 2025/10/18 15:58:38 [notice] 1#1: exit
+ Container epaper-nginx  Stopped
+ Container epaper-app  Stopping
+epaper-nginx exited with code 0
+^[[B
+ Container epaper-app  Stopped
+ Container epaper-db  Stopping
+epaper-app exited with code 137
+epaper-db     | 2025-10-18 15:58:49.415 UTC [1] LOG:  received fast shutdown request
+epaper-db     | 2025-10-18 15:58:49.419 UTC [1] LOG:  aborting any active transactions
+epaper-db     | 2025-10-18 15:58:49.453 UTC [1] LOG:  background worker "logical replication launcher" (PID 30) exited with exit code 1
+epaper-db     | 2025-10-18 15:58:49.454 UTC [25] LOG:  shutting down
+epaper-db     | 2025-10-18 15:58:49.459 UTC [25] LOG:  checkpoint starting: shutdown immediate
+epaper-db     | 2025-10-18 15:58:49.473 UTC [25] LOG:  checkpoint complete: wrote 28 buffers (0.2%); 0 WAL file(s) added, 0 removed, 0 recycled; write=0.002 s, sync=0.002 s, total=0.020 s; sync files=17, longest=0.001 s, average=0.001 s; distance=3 kB, estimate=463 kB; lsn=0/19A0268, redo lsn=0/19A0268
+epaper-db     | 2025-10-18 15:58:49.494 UTC [1] LOG:  database system is shut down
+ Container epaper-db  Stopped
