@@ -50,7 +50,8 @@ export default function AdminUsers() {
   const [email, setEmail] = useState("");
   const [epaperImportUrl, setEpaperImportUrl] = useState("");
   const [epaperExportUrl, setEpaperExportUrl] = useState("");
-  const [epaperApiKey, setEpaperApiKey] = useState("");
+  const [epaperImportKey, setEpaperImportKey] = useState("");
+  const [epaperExportKey, setEpaperExportKey] = useState("");
 
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -124,7 +125,8 @@ export default function AdminUsers() {
     setEmail("");
     setEpaperImportUrl("");
     setEpaperExportUrl("");
-    setEpaperApiKey("");
+    setEpaperImportKey("");
+    setEpaperExportKey("");
   };
 
   const handleEdit = (user: User) => {
@@ -137,7 +139,8 @@ export default function AdminUsers() {
     setEmail(user.email || "");
     setEpaperImportUrl(user.epaperImportUrl || "");
     setEpaperExportUrl(user.epaperExportUrl || "");
-    setEpaperApiKey(user.epaperApiKey || "");
+    setEpaperImportKey(user.epaperImportKey || "");
+    setEpaperExportKey(user.epaperExportKey || "");
     setPassword("");
   };
 
@@ -152,7 +155,8 @@ export default function AdminUsers() {
       email: email || null,
       epaperImportUrl: epaperImportUrl || null,
       epaperExportUrl: epaperExportUrl || null,
-      epaperApiKey: epaperApiKey || null,
+      epaperImportKey: epaperImportKey || null,
+      epaperExportKey: epaperExportKey || null,
     };
 
     if (editingUser) {
@@ -319,17 +323,32 @@ export default function AdminUsers() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="epaperApiKey">E-Paper API Key</Label>
+                    <Label htmlFor="epaperImportKey">E-Paper Import Key</Label>
                     <Input
-                      id="epaperApiKey"
+                      id="epaperImportKey"
                       type="password"
-                      value={epaperApiKey}
-                      onChange={(e) => setEpaperApiKey(e.target.value)}
-                      placeholder="API key for e-paper endpoints"
-                      data-testid="input-epaper-api-key"
+                      value={epaperImportKey}
+                      onChange={(e) => setEpaperImportKey(e.target.value)}
+                      placeholder="API key for sending status updates"
+                      data-testid="input-epaper-import-key"
                     />
                     <p className="text-xs text-muted-foreground">
-                      Authentication key for e-paper API requests
+                      Authentication key for import endpoint (sending updates)
+                    </p>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="epaperExportKey">E-Paper Export Key</Label>
+                    <Input
+                      id="epaperExportKey"
+                      type="password"
+                      value={epaperExportKey}
+                      onChange={(e) => setEpaperExportKey(e.target.value)}
+                      placeholder="API key for fetching status"
+                      data-testid="input-epaper-export-key"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Authentication key for export endpoint (fetching status)
                     </p>
                   </div>
                 </div>
@@ -471,17 +490,32 @@ export default function AdminUsers() {
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-epaperApiKey">E-Paper API Key</Label>
+                  <Label htmlFor="edit-epaperImportKey">E-Paper Import Key</Label>
                   <Input
-                    id="edit-epaperApiKey"
+                    id="edit-epaperImportKey"
                     type="password"
-                    value={epaperApiKey}
-                    onChange={(e) => setEpaperApiKey(e.target.value)}
-                    placeholder="API key for e-paper endpoints"
-                    data-testid="input-edit-epaper-api-key"
+                    value={epaperImportKey}
+                    onChange={(e) => setEpaperImportKey(e.target.value)}
+                    placeholder="API key for sending status updates"
+                    data-testid="input-edit-epaper-import-key"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Authentication key for e-paper API requests
+                    Authentication key for import endpoint (sending updates)
+                  </p>
+                </div>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-epaperExportKey">E-Paper Export Key</Label>
+                  <Input
+                    id="edit-epaperExportKey"
+                    type="password"
+                    value={epaperExportKey}
+                    onChange={(e) => setEpaperExportKey(e.target.value)}
+                    placeholder="API key for fetching status"
+                    data-testid="input-edit-epaper-export-key"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Authentication key for export endpoint (fetching status)
                   </p>
                 </div>
               </div>
