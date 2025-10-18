@@ -17,7 +17,6 @@ import { useLocation } from "wouter";
 
 interface DashboardHeaderProps {
   totalMembers: number;
-  availableCount: number;
   lastSync: Date | null;
   isSyncing: boolean;
   syncError?: string;
@@ -26,7 +25,6 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({
   totalMembers,
-  availableCount,
   lastSync,
   isSyncing,
   syncError,
@@ -60,11 +58,6 @@ export function DashboardHeader({
           </h1>
           <div className="hidden sm:flex items-center gap-4 text-sm text-muted-foreground">
             <span data-testid="text-total-members">{totalMembers} members</span>
-            <span className="text-muted-foreground/50">•</span>
-            <span className="flex items-center gap-1.5" data-testid="text-available-count">
-              <div className="h-2 w-2 rounded-full bg-[hsl(var(--status-available))]" />
-              {availableCount} available
-            </span>
           </div>
         </div>
 

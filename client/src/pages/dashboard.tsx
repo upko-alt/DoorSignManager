@@ -148,14 +148,11 @@ export default function Dashboard() {
     }
   };
 
-  const availableCount = members.filter((m) => m.currentStatus === "Available").length;
-
   if (error) {
     return (
       <div className="min-h-screen bg-background">
         <DashboardHeader
           totalMembers={0}
-          availableCount={0}
           lastSync={syncStatus?.syncedAt ? new Date(syncStatus.syncedAt) : null}
           isSyncing={syncMutation.isPending}
           syncError={syncStatus?.success === "false" ? (syncStatus.errorMessage || undefined) : undefined}
@@ -182,7 +179,6 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background">
       <DashboardHeader
         totalMembers={members.length}
-        availableCount={availableCount}
         lastSync={syncStatus?.syncedAt ? new Date(syncStatus.syncedAt) : null}
         isSyncing={syncMutation.isPending}
         syncError={syncStatus?.success === "false" ? (syncStatus.errorMessage || undefined) : undefined}

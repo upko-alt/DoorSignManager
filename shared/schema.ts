@@ -24,6 +24,10 @@ export const users = pgTable("users", {
   lastName: varchar("last_name"),
   role: varchar("role").notNull().default("regular"), // admin or regular
   epaperId: varchar("epaper_id").notNull(), // Specific ID for e-paper system (e.g., "user1", "user2")
+  // E-paper API configuration (per-user)
+  epaperImportUrl: text("epaper_import_url"), // URL to send status updates
+  epaperExportUrl: text("epaper_export_url"), // URL to fetch status
+  epaperApiKey: text("epaper_api_key"), // API key for authentication
   // Door sign status fields
   avatarUrl: text("avatar_url"),
   currentStatus: text("current_status").notNull().default("Available"),
