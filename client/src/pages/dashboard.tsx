@@ -14,7 +14,7 @@ import { AlertCircle, Shield } from "lucide-react";
 
 export default function Dashboard() {
   const { toast } = useToast();
-  const { isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [updatingMembers, setUpdatingMembers] = useState<Set<string>>(new Set());
 
   // Fetch members data (now returns users with status fields)
@@ -186,14 +186,6 @@ export default function Dashboard() {
       />
       
       <main className="container px-4 sm:px-6 lg:px-8 py-8">
-        {!isAdmin && (
-          <Alert className="mb-6" data-testid="alert-readonly">
-            <Shield className="h-4 w-4" />
-            <AlertDescription>
-              You have read-only access. Only administrators can update member statuses.
-            </AlertDescription>
-          </Alert>
-        )}
         
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -240,7 +232,7 @@ export default function Dashboard() {
                 member={member}
                 onUpdateStatus={handleUpdateStatus}
                 isUpdating={updatingMembers.has(member.id)}
-                readOnly={!isAdmin}
+                readOnly={!isAdmin && member.id !== user?.id}
                 statusOptions={statusOptions}
               />
             ))}

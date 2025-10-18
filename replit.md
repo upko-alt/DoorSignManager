@@ -8,7 +8,28 @@ This is a real-time door sign management system that allows department members t
 
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (October 17, 2025)
+## Recent Changes
+
+### October 18, 2025 - Per-User E-Paper Configuration
+- **Per-User E-Paper Credentials**
+  - Moved e-paper configuration from global environment variables to per-user database fields
+  - Each user now has: `epaperImportUrl`, `epaperExportUrl`, `epaperApiKey` stored in users table
+  - Admins can configure e-paper endpoints individually for each user through the Add/Edit user dialogs
+  - Users without e-paper configuration are automatically skipped during sync operations
+- **Refactored E-Paper Services**
+  - Updated `syncService.ts` to iterate through users and use each user's own credentials instead of global env vars
+  - Updated `EpaperService` in `routes.ts` to accept per-user credentials as method parameters
+  - Sync continues operating even if individual user syncs fail (isolated error handling)
+- **Security Hardening**
+  - Implemented role-based filtering for e-paper credentials in API responses
+  - Non-admin users cannot see any user's e-paper API keys, URLs, or endpoints
+  - Only admins can view and manage e-paper credentials through `/api/members` endpoints
+  - Prevents credential leakage while maintaining admin functionality
+- **UI Improvements**
+  - Removed broken "available count" display from dashboard header (no longer accurate with custom statuses)
+  - Added three new input fields to admin user management forms for e-paper configuration
+
+### October 17, 2025
 
 ### Major Architecture Refactor: Merged Members into Users Table
 - **Simplified Data Model**
@@ -120,6 +141,9 @@ Preferred communication style: Simple, everyday language.
   - `email`, `firstName`, `lastName`: Profile information
   - `role`: User role ("admin" or "regular")
   - `epaperId`: E-paper system identifier (e.g., "user1", "user2")
+  - `epaperImportUrl`: Per-user e-paper import endpoint URL (optional)
+  - `epaperExportUrl`: Per-user e-paper export endpoint URL (optional)
+  - `epaperApiKey`: Per-user e-paper API authentication key (optional, admin-only visibility)
   - `avatarUrl`: Optional profile image URL
   - `currentStatus`: Current availability status (default: "Available")
   - `customStatusText`: Optional custom message (max 50 chars)
@@ -152,15 +176,25 @@ Preferred communication style: Simple, everyday language.
 ### External Dependencies
 
 #### E-Paper Hardware Integration
-- **Import API** (`EPAPER_IMPORT_URL`): Sends status updates to e-paper displays
-  - Authentication via `EPAPER_IMPORT_KEY` query parameter
-  - GET request with email-based parameter routing (e.g., `?user_email_status=Available`)
-  - Email sanitization: converts `@` and `.` to `_` for URL compatibility
-- **Export API** (`EPAPER_EXPORT_URL`): Fetches current status from e-paper system
-  - Authentication via `EPAPER_EXPORT_KEY` query parameter
+- **Per-User Configuration**: Each user can have their own e-paper endpoints and API credentials
+  - `epaperImportUrl`: User-specific endpoint for sending status updates to e-paper displays
+  - `epaperExportUrl`: User-specific endpoint for fetching current status from e-paper system
+  - `epaperApiKey`: User-specific API authentication key
+  - All fields are optional and configured by admins through the user management interface
+- **Import API**: Sends status updates to e-paper displays
+  - Authentication via API key in query parameter
+  - GET request with epaper ID-based parameter routing (e.g., `?user1_status=Available`)
+  - Supports custom status messages
+- **Export API**: Fetches current status from e-paper system
+  - Authentication via API key in query parameter
   - Used for synchronization and verification
+  - Sync service automatically iterates through all users with configured credentials
+- **Security**:
+  - E-paper credentials are only visible to admin users via API
+  - Non-admin users cannot see any e-paper URLs or API keys
+  - Credentials stored in database as plain text (scoped per-user, never exposed to unauthorized users)
 
-**Key Design Decision**: The e-paper service uses a simple GET-based API with query parameters rather than POST/JSON. This design accommodates legacy hardware constraints while maintaining reliability through explicit error handling and logging.
+**Key Design Decision**: The e-paper service uses a simple GET-based API with query parameters rather than POST/JSON. This design accommodates legacy hardware constraints while maintaining reliability through explicit error handling and logging. Per-user configuration allows flexible deployment where different users may have different e-paper systems or no e-paper display at all.
 
 #### UI Component Libraries
 - **Radix UI**: Unstyled, accessible component primitives (Dialog, Dropdown, Popover, Toast, etc.)
