@@ -1,0 +1,22 @@
+epaper-app    | 3:56:41 PM [express] GET /api/members/e24c0226-9f3c-4480-a099-55280710453c/history 200 in 43ms :: []
+epaper-app    | Error fetching e-paper statuses: TypeError: fetch failed
+epaper-app    |     at node:internal/deps/undici/undici:13510:13
+epaper-app    |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+epaper-app    |     at async EpaperService.fetchCurrentStatuses (file:///app/dist/index.js:458:24)
+epaper-app    |     at async file:///app/dist/index.js:725:24 {
+epaper-app    |   [cause]: Error: getaddrinfo ENOTFOUND your-epaper-api.com
+epaper-app    |       at GetAddrInfoReqWrap.onlookupall [as oncomplete] (node:dns:122:26) {
+epaper-app    |     errno: -3008,
+epaper-app    |     code: 'ENOTFOUND',
+epaper-app    |     syscall: 'getaddrinfo',
+epaper-app    |     hostname: 'your-epaper-api.com'
+epaper-app    |   }
+epaper-app    | }
+epaper-app    | 3:56:49 PM [express] POST /api/sync 200 in 41ms :: {"success":true,"updatedCount":0,"syncedAt":"2025…
+epaper-nginx  | 87.197.132.75 - - [18/Oct/2025:15:56:49 +0000] "POST /api/sync HTTP/1.1" 200 123 "http://159.89.105.201/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15" "-"
+epaper-nginx  | 87.197.132.75 - - [18/Oct/2025:15:56:49 +0000] "GET /api/sync/status HTTP/1.1" 200 171 "http://159.89.105.201/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15" "-"
+epaper-app    | 3:56:49 PM [express] GET /api/sync/status 200 in 16ms :: {"id":"fb840b8c-0014-4d60-8eeb-87e67375e88d…
+epaper-nginx  | 87.197.132.75 - - [18/Oct/2025:15:56:49 +0000] "GET /api/members HTTP/1.1" 304 0 "http://159.89.105.201/" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15" "-"
+epaper-app    | 3:56:49 PM [express] GET /api/members 304 in 38ms :: [{"id":"e24c0226-9f3c-4480-a099-55280710453c","…
+epaper-nginx  | 87.197.132.75 - - [18/Oct/2025:15:56:53 +0000] "GET /api/users HTTP/1.1" 200 259 "http://159.89.105.201/admin/users" "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15" "-"
+epaper-app    | 3:56:53 PM [express] GET /api/users 200 in 12ms :: [{"id":"e24c0226-9f3c-4480-a099-55280710453c","us…
