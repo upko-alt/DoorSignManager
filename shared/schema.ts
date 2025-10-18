@@ -27,7 +27,8 @@ export const users = pgTable("users", {
   // E-paper API configuration (per-user)
   epaperImportUrl: text("epaper_import_url"), // URL to send status updates
   epaperExportUrl: text("epaper_export_url"), // URL to fetch status
-  epaperApiKey: text("epaper_api_key"), // API key for authentication
+  epaperImportKey: text("epaper_import_key"), // API key for import (sending status updates)
+  epaperExportKey: text("epaper_export_key"), // API key for export (fetching status)
   // Door sign status fields
   avatarUrl: text("avatar_url"),
   currentStatus: text("current_status").notNull().default("Available"),

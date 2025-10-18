@@ -8,7 +8,7 @@ export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(username: string, passwordHash: string, role?: string, epaperId?: string, email?: string, firstName?: string, lastName?: string, epaperImportUrl?: string, epaperExportUrl?: string, epaperApiKey?: string): Promise<User>;
+  createUser(username: string, passwordHash: string, role?: string, epaperId?: string, email?: string, firstName?: string, lastName?: string, epaperImportUrl?: string, epaperExportUrl?: string, epaperImportKey?: string, epaperExportKey?: string): Promise<User>;
   updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<void>;
   getAllUsers(): Promise<User[]>;
@@ -52,7 +52,7 @@ export class DbStorage implements IStorage {
     return result[0];
   }
 
-  async createUser(username: string, passwordHash: string, role: string = "regular", epaperId?: string, email?: string, firstName?: string, lastName?: string, epaperImportUrl?: string, epaperExportUrl?: string, epaperApiKey?: string): Promise<User> {
+  async createUser(username: string, passwordHash: string, role: string = "regular", epaperId?: string, email?: string, firstName?: string, lastName?: string, epaperImportUrl?: string, epaperExportUrl?: string, epaperImportKey?: string, epaperExportKey?: string): Promise<User> {
     // Check if this is the first user (make them admin)
     const allUsers = await this.db.select().from(users);
     const isFirstUser = allUsers.length === 0;
@@ -69,7 +69,8 @@ export class DbStorage implements IStorage {
         lastName: lastName || null,
         epaperImportUrl: epaperImportUrl || null,
         epaperExportUrl: epaperExportUrl || null,
-        epaperApiKey: epaperApiKey || null,
+        epaperImportKey: epaperImportKey || null,
+        epaperExportKey: epaperExportKey || null,
       })
       .returning();
     return user;
