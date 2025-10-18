@@ -201,16 +201,16 @@ export default function AdminUsers() {
                 Add User
               </Button>
             </DialogTrigger>
-            <DialogContent>
-              <form onSubmit={handleSubmit}>
-                <DialogHeader>
+            <DialogContent className="max-h-[90vh] flex flex-col">
+              <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                <DialogHeader className="flex-shrink-0">
                   <DialogTitle>Add New User</DialogTitle>
                   <DialogDescription>
                     Create a new user account with access to the dashboard
                   </DialogDescription>
                 </DialogHeader>
                 
-                <div className="grid gap-4 py-4">
+                <div className="grid gap-4 py-4 overflow-y-auto flex-1">
                   <div className="grid gap-2">
                     <Label htmlFor="username">Username *</Label>
                     <Input
@@ -353,7 +353,7 @@ export default function AdminUsers() {
                   </div>
                 </div>
 
-                <DialogFooter>
+                <DialogFooter className="flex-shrink-0">
                   <Button
                     type="button"
                     variant="outline"
@@ -375,16 +375,16 @@ export default function AdminUsers() {
 
         {/* Edit Dialog */}
         <Dialog open={!!editingUser} onOpenChange={() => setEditingUser(null)}>
-          <DialogContent>
-            <form onSubmit={handleSubmit}>
-              <DialogHeader>
+          <DialogContent className="max-h-[90vh] flex flex-col">
+            <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+              <DialogHeader className="flex-shrink-0">
                 <DialogTitle>Edit User</DialogTitle>
                 <DialogDescription>
                   Update user information and permissions
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-4 py-4 overflow-y-auto flex-1">
                 <div className="grid gap-2">
                   <Label>Username</Label>
                   <Input value={username} disabled />
@@ -520,7 +520,7 @@ export default function AdminUsers() {
                 </div>
               </div>
 
-              <DialogFooter>
+              <DialogFooter className="flex-shrink-0">
                 <Button
                   type="button"
                   variant="outline"

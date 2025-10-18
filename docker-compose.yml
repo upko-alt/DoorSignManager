@@ -1,5 +1,13 @@
 version: '3.8'
 
+# Usage:
+# - Start and view logs: docker-compose up
+# - Start in background: docker-compose up -d
+# - View logs after starting in background: docker-compose logs -f
+# - View logs for specific service: docker-compose logs -f app
+# - Stop services: docker-compose down
+# - Rebuild and restart: docker-compose build && docker-compose up -d
+
 services:
   # PostgreSQL Database
   db:
@@ -19,6 +27,11 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - epaper-network
 
@@ -51,6 +64,11 @@ services:
       - ./logs:/app/logs
     networks:
       - epaper-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     command: sh -c "npx drizzle-kit push --force && node dist/docker-init.js && node dist/index.js"
 
   # Nginx Reverse Proxy
@@ -67,6 +85,11 @@ services:
       - ./deploy/nginx-docker.conf:/etc/nginx/conf.d/default.conf:ro
       - ./ssl:/etc/nginx/ssl:ro  # For SSL certificates
       - nginx_cache:/var/cache/nginx
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     networks:
       - epaper-network
 
