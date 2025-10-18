@@ -74,11 +74,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Filter sensitive fields for non-admin users
       const sanitizedUsers = users.map((user) => {
-        const { passwordHash, epaperApiKey, epaperImportUrl, epaperExportUrl, ...publicUser } = user;
+        const { passwordHash, epaperImportKey, epaperExportKey, epaperImportUrl, epaperExportUrl, ...publicUser } = user;
         
         // Only admins can see e-paper credentials
         if (currentUser.role === "admin") {
-          return { ...publicUser, epaperApiKey, epaperImportUrl, epaperExportUrl };
+          return { ...publicUser, epaperImportKey, epaperExportKey, epaperImportUrl, epaperExportUrl };
         }
         
         return publicUser;
@@ -103,11 +103,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "User not found" });
       }
       
-      const { passwordHash, epaperApiKey, epaperImportUrl, epaperExportUrl, ...publicUser } = user;
+      const { passwordHash, epaperImportKey, epaperExportKey, epaperImportUrl, epaperExportUrl, ...publicUser } = user;
       
       // Only admins can see e-paper credentials
       if (currentUser.role === "admin") {
-        res.json({ ...publicUser, epaperApiKey, epaperImportUrl, epaperExportUrl });
+        res.json({ ...publicUser, epaperImportKey, epaperExportKey, epaperImportUrl, epaperExportUrl });
       } else {
         res.json(publicUser);
       }
@@ -161,10 +161,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Send update to e-paper system using per-user credentials
       try {
-        if (user.epaperImportUrl && user.epaperApiKey) {
+        if (user.epaperImportUrl && user.epaperImportKey) {
           await epaperService.sendStatusUpdate(
             user.epaperImportUrl,
-            user.epaperApiKey,
+            user.epaperImportKey,
             user.username,
             validated.status,
             validated.customText
@@ -175,10 +175,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Filter sensitive fields for non-admin users
-      const { passwordHash, epaperApiKey, epaperImportUrl, epaperExportUrl, ...publicUser } = updatedUser;
+      const { passwordHash, epaperImportKey, epaperExportKey, epaperImportUrl, epaperExportUrl, ...publicUser } = updatedUser;
       
       if (currentUser.role === "admin") {
-        res.json({ ...publicUser, epaperApiKey, epaperImportUrl, epaperExportUrl });
+        res.json({ ...publicUser, epaperImportKey, epaperExportKey, epaperImportUrl, epaperExportUrl });
       } else {
         res.json(publicUser);
       }
@@ -232,7 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/users", isAuthenticated, isAdmin, async (req, res) => {
     try {
-      const { username, password, role, epaperId, firstName, lastName, email, epaperImportUrl, epaperExportUrl, epaperApiKey } = req.body;
+      const { username, password, role, epaperId, firstName, lastName, email, epaperImportUrl, epaperExportUrl, epaperImportKey, epaperExportKey } = req.body;
       
       if (!username || !password) {
         return res.status(400).json({ error: "Username and password are required" });
@@ -252,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const passwordHash = await bcrypt.hash(password, 10);
 
       // Create user with all fields
-      const user = await storage.createUser(username, passwordHash, role || "regular", epaperId, email, firstName, lastName, epaperImportUrl, epaperExportUrl, epaperApiKey);
+      const user = await storage.createUser(username, passwordHash, role || "regular", epaperId, email, firstName, lastName, epaperImportUrl, epaperExportUrl, epaperImportKey, epaperExportKey);
 
       const { passwordHash: _, ...userWithoutPassword } = user;
       res.json(userWithoutPassword);
@@ -265,7 +265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/users/:id", isAuthenticated, isAdmin, async (req, res) => {
     try {
       const { id } = req.params;
-      const { role, epaperId, firstName, lastName, email, password, epaperImportUrl, epaperExportUrl, epaperApiKey } = req.body;
+      const { role, epaperId, firstName, lastName, email, password, epaperImportUrl, epaperExportUrl, epaperImportKey, epaperExportKey } = req.body;
       
       const updates: Partial<User> = {};
       if (role) updates.role = role;
@@ -275,7 +275,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (email !== undefined) updates.email = email;
       if (epaperImportUrl !== undefined) updates.epaperImportUrl = epaperImportUrl;
       if (epaperExportUrl !== undefined) updates.epaperExportUrl = epaperExportUrl;
-      if (epaperApiKey !== undefined) updates.epaperApiKey = epaperApiKey;
+      if (epaperImportKey !== undefined) updates.epaperImportKey = epaperImportKey;
+      if (epaperExportKey !== undefined) updates.epaperExportKey = epaperExportKey;
       
       // Update password if provided
       if (password) {
@@ -431,7 +432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }> = [];
 
       for (const user of users) {
-        if (!user.epaperExportUrl || !user.epaperApiKey) {
+        if (!user.epaperExportUrl || !user.epaperExportKey) {
           verificationData.push({
             username: user.username,
             epaperStatus: null,
@@ -441,8 +442,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         try {
-          const url = `${user.epaperExportUrl}/?export_key=${encodeURIComponent(user.epaperApiKey)}&my_values=json`;
-          const response = await fetch(url, { method: 'GET' });
+          const url = `${user.epaperExportUrl}/?export_key=${encodeURIComponent(user.epaperExportKey)}&my_values=json`;
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+          
+          const response = await fetch(url, { 
+            method: 'GET',
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
 
           if (!response.ok) {
             verificationData.push({

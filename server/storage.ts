@@ -199,7 +199,7 @@ export class MemStorage implements IStorage {
     return Array.from(this.usersMap.values()).find(u => u.username === username);
   }
 
-  async createUser(username: string, passwordHash: string, role: string = "regular", epaperId?: string, email?: string, firstName?: string, lastName?: string, epaperImportUrl?: string, epaperExportUrl?: string, epaperApiKey?: string): Promise<User> {
+  async createUser(username: string, passwordHash: string, role: string = "regular", epaperId?: string, email?: string, firstName?: string, lastName?: string, epaperImportUrl?: string, epaperExportUrl?: string, epaperImportKey?: string, epaperExportKey?: string): Promise<User> {
     const id = randomUUID();
     const isFirstUser = this.usersMap.size === 0;
     
@@ -214,7 +214,8 @@ export class MemStorage implements IStorage {
       epaperId: epaperId || `user_${username}`,
       epaperImportUrl: epaperImportUrl || null,
       epaperExportUrl: epaperExportUrl || null,
-      epaperApiKey: epaperApiKey || null,
+      epaperImportKey: epaperImportKey || null,
+      epaperExportKey: epaperExportKey || null,
       avatarUrl: null,
       currentStatus: "Available",
       customStatusText: null,
