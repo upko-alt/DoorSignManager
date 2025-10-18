@@ -37,7 +37,10 @@ services:
       PORT: 5000
       DATABASE_URL: postgresql://${POSTGRES_USER:-epaper_user}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-epaper_dashboard}
       SESSION_SECRET: ${SESSION_SECRET:?Please set SESSION_SECRET in .env}
-      COOKIE_SECURE: ${COOKIE_SECURE:-true}  # Secure cookies by default (HTTPS). Set to 'false' only for HTTP testing
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}  # Set to 'false' for HTTP. Use 'true' with HTTPS/SSL
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@department.edu}
       EPAPER_IMPORT_URL: ${EPAPER_IMPORT_URL:-}
       EPAPER_IMPORT_KEY: ${EPAPER_IMPORT_KEY:-}
       EPAPER_EXPORT_URL: ${EPAPER_EXPORT_URL:-}
@@ -48,7 +51,7 @@ services:
       - ./logs:/app/logs
     networks:
       - epaper-network
-    command: sh -c "npx drizzle-kit push --force && node dist/index.js"
+    command: sh -c "npx drizzle-kit push --force && npx tsx server/docker-init.ts && node dist/index.js"
 
   # Nginx Reverse Proxy
   nginx:
