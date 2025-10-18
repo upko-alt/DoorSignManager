@@ -16,6 +16,9 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Compile the docker-init.ts script to JavaScript
+RUN npx esbuild server/docker-init.ts --platform=node --packages=external --bundle --format=esm --outfile=dist/docker-init.js
+
 # Remove dev dependencies to save space (keep drizzle-kit for migrations)
 RUN npm prune --production && npm install drizzle-kit
 

@@ -31,21 +31,23 @@ cp .env.example .env
 Open `.env` and set these **REQUIRED** values:
 
 ```bash
-# Database password (change this!)
+# Database password (REQUIRED - use a strong password)
 POSTGRES_PASSWORD=your_secure_database_password_here
 
-# Session secret (generate a random string)
+# Session secret (REQUIRED - generate using command below)
 SESSION_SECRET=your_very_long_random_secret_at_least_32_characters
 
-# Admin credentials (these will be auto-created)
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=admin123
+# Admin credentials (REQUIRED - these will be auto-created on first run)
+ADMIN_USERNAME=youradminname
+ADMIN_PASSWORD=your_secure_admin_password
 ```
 
 **Generate a secure session secret:**
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
+
+**⚠️ IMPORTANT**: All of these values are **REQUIRED**. Docker Compose will refuse to start if any are missing. This ensures you don't accidentally deploy with default credentials.
 
 ### Step 4: Start the application
 
