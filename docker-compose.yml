@@ -1,12 +1,17 @@
 version: '3.8'
 
-# Usage:
-# - Start and view logs: docker-compose up
-# - Start in background: docker-compose up -d
-# - View logs after starting in background: docker-compose logs -f
+# Production Deployment:
+# 1. Build images: docker-compose build
+# 2. Start in background: docker-compose up -d
+# 3. View logs: docker-compose logs -f app
+# 4. Stop logs viewing: Ctrl+C (containers keep running)
+# 5. Stop all services: docker-compose down
+#
+# Development Usage:
+# - Start and view logs (blocks terminal): docker-compose up
+# - Start in background (recommended): docker-compose up -d
+# - View logs after starting: docker-compose logs -f
 # - View logs for specific service: docker-compose logs -f app
-# - Stop services: docker-compose down
-# - Rebuild and restart: docker-compose build && docker-compose up -d
 
 services:
   # PostgreSQL Database
