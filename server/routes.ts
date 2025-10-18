@@ -464,9 +464,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const data = await response.json();
           const statusKey = `status_${user.username}`;
           
+          // Extract just the .value field from the e-paper object {value, datetime, note}
+          const statusValue = data[statusKey]?.value || null;
+          
           verificationData.push({
             username: user.username,
-            epaperStatus: data[statusKey] || null,
+            epaperStatus: statusValue,
             error: null
           });
         } catch (error) {
